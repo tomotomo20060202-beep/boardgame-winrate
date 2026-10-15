@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f5">
+  <title>ボドゲ勝率計算</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    header {
+      padding: 24px 20px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    main {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px #00000008;
+    }
+    h2 { margin-top: 0; font-size: 18px; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      background: #333;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .game {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .muted { color: #777; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ボドゲ勝率計算</h1>
+    <p class="muted">対局記録と勝率をまとめて管理</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>ゲーム一覧</h2>
+      <div class="game">
+        <div>
+          <strong>花札</strong>
+          <p class="muted">スコア計算・対局記録</p>
+        </div>
+        <button onclick="alert('花札の画面はこれから作ります！')">
+          開く
+        </button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>対局成績</h2>
+      <p>対局数：0回</p>
+      <p>勝利数：0回</p>
+      <p>勝率：0%</p>
+      <p class="muted">対局を記録すると、ここに成績が表示されます。</p>
+    </section>
+
+    <section class="card">
+      <h2>ゲームを追加</h2>
+      <p class="muted">好きなボードゲームを登録できるようにする予定です。</p>
+      <button onclick="alert('ゲーム追加機能はこれから作ります！')">
+        ＋ ゲームを追加
+      </button>
+    </section>
+  </main>
+</body>
+</html>
