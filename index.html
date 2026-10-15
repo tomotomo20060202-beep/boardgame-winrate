@@ -2,90 +2,366 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f5f5">
-  <title>ボドゲ勝率計算</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background: #f5f5f5;
-      color: #222;
-    }
-    header {
-      padding: 24px 20px;
-      background: white;
-      border-bottom: 1px solid #ddd;
-    }
-    h1 { margin: 0; font-size: 22px; }
-    main {
-      max-width: 600px;
-      margin: auto;
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px #00000008;
-    }
-    h2 { margin-top: 0; font-size: 18px; }
-    button {
-      border: 0;
-      border-radius: 10px;
-      padding: 12px 16px;
-      background: #333;
-      color: white;
-      font-size: 15px;
-      cursor: pointer;
-    }
-    .game {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .muted { color: #777; font-size: 14px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f5f5f5">
+<title>ボドゲ勝率計算</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f5f5;color:#222;font-family:system-ui,sans-serif}
+header{background:#fff;padding:20px;border-bottom:1px solid #ddd}
+header h1{font-size:22px;margin:0}
+header p{color:#777;font-size:13px;margin:6px 0 0}
+main{max-width:650px;margin:auto;padding:16px}
+nav{display:flex;gap:8px;overflow:auto;margin-bottom:16px}
+nav button{white-space:nowrap;background:#e5e5e5;color:#333}
+button{border:0;border-radius:10px;padding:11px 14px;background:#333;color:white;font-size:14px;cursor:pointer}
+button:disabled{opacity:.4}
+input{font:inherit;min-width:0;width:100%;padding:10px;border:1px solid #ccc;border-radius:9px;background:white;color:#222}
+.card{background:white;border-radius:14px;padding:18px;margin-bottom:15px;box-shadow:0 2px 8px #00000008}
+h2{font-size:18px;margin:0 0 14px}
+h3{font-size:15px;margin:16px 0 8px}
+.muted{font-size:13px;color:#777}
+.row{display:flex;align-items:center;gap:10px}
+.row>*{flex:1}
+.field{margin:10px 0}
+.field label{display:block;font-size:13px;margin-bottom:5px}
+.check{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #eee}
+.check input{width:18px;height:18px;flex:none}
+.check span{flex:1}
+.check small{color:#777;white-space:nowrap}
+.result{background:#f0f0f0;border-radius:12px;padding:16px;margin-top:14px}
+.big{font-size:30px;font-weight:750}
+.primary{width:100%;margin-top:12px}
+.player{display:grid;grid-template-columns:minmax(0,1fr) 100px 36px;gap:8px;margin:8px 0}
+.player button{padding:8px}
+.statgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:#f4f4f4;border-radius:10px;padding:12px 8px;text-align:center}
+.stat strong{display:block;font-size:22px}
+.stat span{font-size:12px;color:#777}
+.record{border-top:1px solid #eee;padding:12px 0}
+.recordhead{display:flex;justify-content:space-between;gap:8px}
+.recordhead button{padding:6px 9px;background:#eee;color:#333}
+[hidden]{display:none!important}
+</style>
 </head>
 <body>
-  <header>
-    <h1>ボドゲ勝率計算</h1>
-    <p class="muted">対局記録と勝率をまとめて管理</p>
-  </header>
+<header>
+  <h1>ボドゲ勝率計算</h1>
+  <p>花札の得点計算・対局記録・勝率管理</p>
+</header>
+<main>
+<nav>
+  <button onclick="showTab('calc')">花札計算</button>
+  <button onclick="showTab('record')">対局記録</button>
+  <button onclick="showTab('stats')">勝率・履歴</button>
+</nav>
 
-  <main>
-    <section class="card">
-      <h2>ゲーム一覧</h2>
-      <div class="game">
-        <div>
-          <strong>花札</strong>
-          <p class="muted">スコア計算・対局記録</p>
-        </div>
-        <button onclick="alert('花札の画面はこれから作ります！')">
-          開く
-        </button>
-      </div>
-    </section>
+<section id="calc">
+  <div class="card">
+    <h2>花札1：役を選択</h2>
+    <p class="muted">成立した役にチェックを入れてください。</p>
+    <div id="yakuList"></div>
+    <h3>枚数による加点</h3>
+    <label class="check">
+      <input type="checkbox" id="kasuOn" onchange="calculate()">
+      <span>かす</span><small>10枚から1文</small>
+    </label>
+    <div class="field">
+      <label for="kasu">かすの枚数</label>
+      <input id="kasu" type="number" min="0" max="100" value="0" oninput="calculate()">
+    </div>
+    <label class="check">
+      <input type="checkbox" id="tanOn" onchange="calculate()">
+      <span>たん</span><small>5枚から1文</small>
+    </label>
+    <div class="field">
+      <label for="tan">たんの枚数</label>
+      <input id="tan" type="number" min="0" max="100" value="0" oninput="calculate()">
+    </div>
+    <label class="check">
+      <input type="checkbox" id="taneOn" onchange="calculate()">
+      <span>たね</span><small>5枚から1文</small>
+    </label>
+    <div class="field">
+      <label for="tane">たねの枚数</label>
+      <input id="tane" type="number" min="0" max="100" value="0" oninput="calculate()">
+    </div>
+    <div class="result">
+      <div class="muted">計算結果</div>
+      <div class="big" id="finalScore">0文</div>
+      <div id="scoreDetail" class="muted">役を選ぶと内訳が表示されます。</div>
+    </div>
+  </div>
+</section>
 
-    <section class="card">
-      <h2>対局成績</h2>
-      <p>対局数：0回</p>
-      <p>勝利数：0回</p>
-      <p>勝率：0%</p>
-      <p class="muted">対局を記録すると、ここに成績が表示されます。</p>
-    </section>
+<section id="record" hidden>
+  <div class="card">
+    <h2>対局を記録</h2>
+    <div class="field">
+      <label for="matchDate">対局日</label>
+      <input type="date" id="matchDate">
+    </div>
+    <div class="field">
+      <label for="gameName">ゲーム名</label>
+      <input id="gameName" value="花札" maxlength="50">
+    </div>
+    <h3>プレイヤーと得点</h3>
+    <p class="muted">各プレイヤーの名前と最終得点を入力してください。最高得点の人を勝者として集計します。</p>
+    <div id="players"></div>
+    <button onclick="addPlayer()" id="addPlayerBtn">＋ プレイヤーを追加</button>
+    <button class="primary" onclick="saveMatch()">この対局を保存</button>
+    <p id="recordMessage" class="muted"></p>
+  </div>
+</section>
 
-    <section class="card">
-      <h2>ゲームを追加</h2>
-      <p class="muted">好きなボードゲームを登録できるようにする予定です。</p>
-      <button onclick="alert('ゲーム追加機能はこれから作ります！')">
-        ＋ ゲームを追加
-      </button>
-    </section>
-  </main>
+<section id="stats" hidden>
+  <div class="card">
+    <h2>全体の成績</h2>
+    <div class="statgrid">
+      <div class="stat"><strong id="totalMatches">0</strong><span>対局数</span></div>
+      <div class="stat"><strong id="totalWins">0</strong><span>勝利数</span></div>
+      <div class="stat"><strong id="overallRate">—</strong><span>勝率</span></div>
+    </div>
+    <p class="muted">引き分けは勝利数に含めません。全員同点の場合は全員引き分けです。</p>
+  </div>
+  <div class="card">
+    <h2>プレイヤー別の勝率</h2>
+    <div id="playerStats" class="muted">まだ対局記録がありません。</div>
+  </div>
+  <div class="card">
+    <h2>対局履歴</h2>
+    <div id="history" class="muted">まだ対局記録がありません。</div>
+  </div>
+</section>
+</main>
+
+<script>
+const YAKU = [
+  ["五光",10],["四光",8],["雨四光",7],["三光",5],
+  ["猪鹿蝶",5],["赤短",5],["青短",5]
+];
+const STORAGE_KEY = "boardgame-winrate-v1";
+let matches = [];
+let nextPlayerId = 1;
+
+try {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  if (Array.isArray(saved)) matches = saved;
+} catch(e) {
+  matches = [];
+}
+
+function showTab(tab) {
+  ["calc","record","stats"].forEach(id => {
+    document.getElementById(id).hidden = id !== tab;
+  });
+  if (tab === "stats") renderStats();
+}
+
+function initYaku() {
+  document.getElementById("yakuList").innerHTML = YAKU.map((y,i) =>
+    `<label class="check">
+      <input type="checkbox" id="yaku${i}" onchange="calculate()">
+      <span>${y[0]}</span><small>${y[1]}文</small>
+    </label>`
+  ).join("");
+}
+
+function safeCount(id) {
+  const n = Number(document.getElementById(id).value);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.floor(n))) : 0;
+}
+
+function calculate() {
+  let base = 0;
+  const details = [];
+  YAKU.forEach((y,i) => {
+    if (document.getElementById("yaku"+i).checked) {
+      base += y[1];
+      details.push(`${y[0]} ${y[1]}文`);
+    }
+  });
+
+  const groups = [
+    ["kasuOn","kasu",10,"かす"],
+    ["tanOn","tan",5,"たん"],
+    ["taneOn","tane",5,"たね"]
+  ];
+  groups.forEach(([check,input,threshold,name]) => {
+    if (document.getElementById(check).checked) {
+      const count = safeCount(input);
+      const score = count >= threshold ? count - threshold + 1 : 0;
+      base += score;
+      details.push(`${name} ${score}文（${count}枚）`);
+    }
+  });
+
+  const doubled = base >= 7;
+  const total = doubled ? base * 2 : base;
+  document.getElementById("finalScore").textContent = total + "文";
+  document.getElementById("scoreDetail").textContent =
+    (details.length ? details.join("、") : "役が選択されていません。") +
+    (doubled ? `。7文以上のため倍計算（${base}文 → ${total}文）` : `。小計 ${base}文`);
+  return total;
+}
+
+function addPlayer(name="",score="") {
+  const container = document.getElementById("players");
+  if (container.children.length >= 4) return;
+  const id = nextPlayerId++;
+  const div = document.createElement("div");
+  div.className = "player";
+  div.dataset.id = id;
+
+  const nameInput = document.createElement("input");
+  nameInput.placeholder = "プレイヤー名";
+  nameInput.maxLength = 40;
+  nameInput.value = name;
+  nameInput.setAttribute("aria-label","プレイヤー名");
+
+  const scoreInput = document.createElement("input");
+  scoreInput.type = "number";
+  scoreInput.step = "1";
+  scoreInput.value = score;
+  scoreInput.placeholder = "得点";
+  scoreInput.setAttribute("aria-label","得点");
+
+  const remove = document.createElement("button");
+  remove.textContent = "×";
+  remove.setAttribute("aria-label","プレイヤーを削除");
+  remove.onclick = () => {
+    if (container.children.length <= 2) {
+      alert("プレイヤーは最低2人必要です。");
+      return;
+    }
+    div.remove();
+    updatePlayerButton();
+  };
+
+  div.append(nameInput,scoreInput,remove);
+  container.appendChild(div);
+  updatePlayerButton();
+}
+
+function updatePlayerButton() {
+  document.getElementById("addPlayerBtn").disabled =
+    document.getElementById("players").children.length >= 4;
+}
+
+function saveMatch() {
+  const game = document.getElementById("gameName").value.trim();
+  const date = document.getElementById("matchDate").value;
+  const rows = [...document.getElementById("players").children];
+  const players = rows.map(row => ({
+    name: row.children[0].value.trim(),
+    score: Number(row.children[1].value)
+  }));
+
+  if (!game || !date) {
+    alert("ゲーム名と対局日を入力してください。");
+    return;
+  }
+  if (players.some(p => !p.name || rowInvalidScore(p.score))) {
+    alert("全員の名前と得点を正しく入力してください。");
+    return;
+  }
+  if (new Set(players.map(p => p.name)).size !== players.length) {
+    alert("プレイヤー名が重複しています。区別できる名前にしてください。");
+    return;
+  }
+
+  const high = Math.max(...players.map(p => p.score));
+  const winners = players.filter(p => p.score === high).map(p => p.name);
+  const match = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    date, game, players, winners
+  };
+
+  matches.unshift(match);
+  try {
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(matches));
+  } catch(e) {
+    matches.shift();
+    alert("保存できませんでした。ブラウザの保存容量を確認してください。");
+    return;
+  }
+
+  document.getElementById("recordMessage").textContent =
+    winners.length === 1 ? `保存しました。勝者：${winners[0]}` :
+    `保存しました。引き分け：${winners.join("、")}`;
+  renderStats();
+}
+
+function rowInvalidScore(n) {
+  return !Number.isFinite(n) || !Number.isInteger(n);
+}
+
+function deleteMatch(id) {
+  if (!confirm("この対局記録を削除しますか？")) return;
+  const old = matches;
+  matches = matches.filter(m => m.id !== id);
+  try {
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(matches));
+    renderStats();
+  } catch(e) {
+    matches = old;
+    alert("削除を保存できませんでした。");
+  }
+}
+
+function renderStats() {
+  const total = matches.length;
+  const wins = matches.reduce((sum,m) => sum + (m.winners.length === 1 ? 1 : 0),0);
+  document.getElementById("totalMatches").textContent = total;
+  document.getElementById("totalWins").textContent = wins;
+  document.getElementById("overallRate").textContent =
+    total ? Math.round(wins / total * 100) + "%" : "—";
+
+  const people = {};
+  matches.forEach(m => {
+    m.players.forEach(p => {
+      if (!people[p.name]) people[p.name] = {matches:0,wins:0,draws:0};
+      people[p.name].matches++;
+      if (m.winners.length > 1 && m.winners.includes(p.name)) people[p.name].draws++;
+      if (m.winners.length === 1 && m.winners[0] === p.name) people[p.name].wins++;
+    });
+  });
+
+  const stats = Object.entries(people).sort((a,b) => b[1].wins-a[1].wins);
+  document.getElementById("playerStats").innerHTML = stats.length ? stats.map(([name,s]) =>
+    `<div class="record"><strong>${escapeHTML(name)}</strong>
+    <p>参加 ${s.matches}回 ／ 勝利 ${s.wins}回 ／ 引き分け ${s.draws}回 ／ 勝率 ${Math.round(s.wins/s.matches*100)}%</p></div>`
+  ).join("") : "まだ対局記録がありません。";
+
+  document.getElementById("history").innerHTML = total ? matches.map(m =>
+    `<div class="record">
+      <div class="recordhead"><strong>${escapeHTML(m.game)}</strong>
+      <button onclick="deleteMatch('${m.id}')">削除</button></div>
+      <p class="muted">${escapeHTML(m.date)}</p>
+      <p>${m.players.map(p => `${escapeHTML(p.name)}：${p.score}点`).join(" ／ ")}</p>
+      <p>勝者：${m.winners.map(escapeHTML).join("、")}</p>
+    </div>`
+  ).join("") : "まだ対局記録がありません。";
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function localDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+initYaku();
+document.getElementById("matchDate").value = localDate();
+addPlayer("自分","");
+addPlayer("相手","");
+calculate();
+renderStats();
+</script>
 </body>
 </html>
