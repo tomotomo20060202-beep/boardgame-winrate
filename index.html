@@ -6,1122 +6,623 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f5f7fb">
 <title>ボドゲ勝率計算</title>
-
 <style>
-:root {
-  --main: #4f70e8;
-  --main-light: #edf1ff;
-  --bg: #f5f7fb;
-  --text: #242938;
-  --muted: #737b8e;
-  --border: #e0e4ed;
-  --danger: #d94b58;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
-}
-header {
-  padding: 20px 16px;
-  background: white;
-  border-bottom: 1px solid var(--border);
-}
-.header-inner {
-  max-width: 760px;
-  margin: auto;
-}
-header h1 { margin: 0; font-size: 22px; }
-header p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
-main {
-  max-width: 760px;
-  margin: auto;
-  padding: 20px 14px 50px;
-}
-h2 { font-size: 21px; margin: 0 0 16px; }
-h3 { font-size: 16px; margin: 0 0 12px; }
-p { line-height: 1.6; }
-.panel, .game-card, .match-card, .stat-card {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 15px;
-  padding: 16px;
-  margin-bottom: 14px;
-}
-.menu-grid, .game-list, .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-.menu-button, .game-choice {
-  padding: 18px 12px;
-  min-height: 76px;
-  background: white;
-  border: 2px solid var(--border);
-  border-radius: 13px;
-  color: var(--text);
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.menu-button { text-align: left; }
-.menu-button small {
-  display: block;
-  margin-top: 7px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--muted);
-}
-.game-choice.selected {
-  background: var(--main-light);
-  border-color: var(--main);
-  color: #2d4fc0;
-}
-button { font: inherit; }
-button:disabled { opacity: .45; cursor: not-allowed; }
-.primary, .secondary, .danger, .small-button {
-  border: 0;
-  border-radius: 10px;
-  padding: 11px 15px;
-  cursor: pointer;
-  font-weight: 650;
-}
-.primary { background: var(--main); color: white; }
-.secondary { background: #edf0f6; color: var(--text); }
-.danger { background: #fff0f1; color: var(--danger); }
-.small-button { padding: 7px 10px; background: #edf0f6; }
-.full { width: 100%; }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; }
-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 650;
-  margin-bottom: 6px;
-}
-input, select {
-  width: 100%;
-  padding: 11px;
-  border: 1px solid #d8deea;
-  border-radius: 9px;
-  background: white;
-  color: var(--text);
-  font: inherit;
-}
-input[type="checkbox"] { width: auto; }
-.field { margin-bottom: 14px; }
-.muted { color: var(--muted); font-size: 13px; }
-.hidden { display: none !important; }
-.back-button {
-  margin-bottom: 16px;
-  border: 0;
-  background: transparent;
-  color: var(--main);
-  font-weight: 700;
-  cursor: pointer;
-  padding: 4px 0;
-}
-.player-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px;
-  gap: 10px;
-  align-items: end;
-  margin-bottom: 12px;
-}
-.player-row label { margin-bottom: 6px; }
-.player-row .score-wrap { min-width: 0; }
-.section-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.section-title h3 { margin: 0; }
-.stat-number { font-size: 26px; font-weight: 800; }
-.stat-label { color: var(--muted); font-size: 12px; }
-.stats-grid { margin-bottom: 14px; }
-.stat-card { margin: 0; }
-.list-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--border);
-}
-.list-row:last-child { border-bottom: 0; }
-.list-row .item-main { min-width: 0; overflow-wrap: anywhere; }
-.winner { color: #2d62c9; font-weight: 750; }
-.match-card h3 { margin-bottom: 6px; }
-.match-meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
-.score-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 5px 0;
-}
-.yaku-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
-}
-.yaku-option {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  font-size: 13px;
-  margin: 0;
-}
-.yaku-option input { flex: 0 0 auto; }
-.notice {
-  background: #fff8e6;
-  border: 1px solid #f0dfaa;
-  border-radius: 10px;
-  padding: 11px;
-  font-size: 13px;
-}
-@media (max-width: 420px) {
-  .menu-grid, .game-list, .stats-grid { grid-template-columns: 1fr 1fr; }
-  .player-row { grid-template-columns: minmax(0, 1fr) 86px; }
-  .panel, .game-card, .match-card { padding: 13px; }
-}
+:root{--main:#4f70e8;--light:#edf1ff;--bg:#f5f7fb;--text:#242938;--muted:#737b8e;--border:#e0e4ed}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+header{background:white;padding:20px 16px;border-bottom:1px solid var(--border)}
+.header-inner,main{max-width:760px;margin:auto}
+header h1{font-size:22px;margin:0}
+header p{font-size:13px;color:var(--muted);margin:5px 0 0}
+main{padding:20px 14px 50px}
+h2{font-size:21px;margin:0 0 16px}
+h3{font-size:16px;margin:0 0 12px}
+p{line-height:1.6}
+.panel,.game-card,.match-card,.stat-card{background:white;border:1px solid var(--border);border-radius:15px;padding:16px;margin-bottom:14px}
+.menu-grid,.game-list,.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.menu-button,.game-choice{padding:18px 12px;min-height:76px;background:white;border:2px solid var(--border);border-radius:13px;color:var(--text);font-size:16px;font-weight:700;cursor:pointer}
+.menu-button{text-align:left}
+.menu-button small{display:block;margin-top:7px;font-size:12px;font-weight:400;color:var(--muted)}
+.game-choice.selected{background:var(--light);border-color:var(--main);color:#2d4fc0}
+button{font:inherit}
+button:disabled{opacity:.45;cursor:not-allowed}
+.primary,.secondary,.danger,.small-button{border:0;border-radius:10px;padding:11px 15px;cursor:pointer;font-weight:650}
+.primary{background:var(--main);color:white}
+.secondary{background:#edf0f6;color:var(--text)}
+.danger{background:#fff0f1;color:#d94b58}
+.small-button{padding:7px 10px;background:#edf0f6}
+.full{width:100%}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+label{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+input,select{width:100%;padding:11px;border:1px solid #d8deea;border-radius:9px;background:white;color:var(--text);font:inherit}
+input[type=checkbox]{width:auto}
+.field{margin-bottom:14px}
+.muted{color:var(--muted);font-size:13px}
+.hidden{display:none!important}
+.back-button{margin-bottom:16px;border:0;background:transparent;color:var(--main);font-weight:700;cursor:pointer;padding:4px 0}
+.player-row{display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:10px;align-items:end;margin-bottom:12px}
+.player-row label{margin-bottom:6px}
+.stat-number{font-size:26px;font-weight:800}
+.stat-label{color:var(--muted);font-size:12px}
+.stat-card{margin:0}
+.list-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.list-row:last-child{border-bottom:0}
+.item-main{min-width:0;overflow-wrap:anywhere}
+.winner{color:#2d62c9;font-weight:750}
+.match-card h3{margin-bottom:6px}
+.match-meta{color:var(--muted);font-size:12px;margin-bottom:10px}
+.score-line{display:flex;justify-content:space-between;gap:12px;padding:5px 0}
+.yaku-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.yaku-option{display:flex;gap:8px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:9px;font-size:13px;margin:0}
+.yaku-option input{flex:0 0 auto}
+.notice{background:#fff8e6;border:1px solid #f0dfaa;border-radius:10px;padding:11px;font-size:13px}
+@media(max-width:420px){.menu-grid,.game-list,.stats-grid{grid-template-columns:1fr 1fr}.player-row{grid-template-columns:minmax(0,1fr) 86px}.panel,.game-card,.match-card{padding:13px}}
 </style>
 </head>
-
 <body>
 <header>
-  <div class="header-inner">
-    <h1>🎲 ボドゲ勝率計算</h1>
-    <p>対局を記録して、勝率を確認しよう</p>
-  </div>
+<div class="header-inner">
+<h1>🎲 ボドゲ勝率計算</h1>
+<p>対局を記録して、勝率を確認しよう</p>
+</div>
 </header>
-
 <main>
-  <!-- ホーム -->
-  <section id="homePage">
-    <h2>ホーム</h2>
-    <div class="menu-grid">
-      <button class="menu-button" onclick="showPage('recordPage')">
-        🎮 ゲーム記録
-        <small>ゲームを選んで対局を記録</small>
-      </button>
-      <button class="menu-button" onclick="showPage('historyPage')">
-        📊 履歴・勝率
-        <small>対局結果を振り返る</small>
-      </button>
-      <button class="menu-button" onclick="showPage('settingsPage')">
-        ⚙️ 設定
-        <small>ゲームやプレイヤーを登録</small>
-      </button>
-    </div>
-    <div class="panel" style="margin-top:16px">
-      <h3>最近の対局</h3>
-      <div id="recentMatches" class="muted">まだ対局記録がありません。</div>
-    </div>
-  </section>
 
-  <!-- 対局記録 -->
-  <section id="recordPage" class="hidden">
-    <button class="back-button" onclick="showPage('homePage')">← ホームに戻る</button>
-    <h2>ゲーム記録</h2>
+<!-- ホーム -->
+<section id="homePage">
+<h2>ホーム</h2>
+<div class="menu-grid">
+<button class="menu-button" onclick="showPage('recordPage')">🎮 ゲーム記録<small>ゲームを選んで対局を記録</small></button>
+<button class="menu-button" onclick="showPage('historyPage')">📊 履歴・勝率<small>対局結果を振り返る</small></button>
+<button class="menu-button" onclick="showPage('settingsPage')">⚙️ 設定<small>ゲームやプレイヤーを登録</small></button>
+</div>
+<div class="panel" style="margin-top:16px">
+<h3>最近の対局</h3>
+<div id="recentMatches" class="muted">まだ対局記録がありません。</div>
+</div>
+</section>
 
-    <div class="panel">
-      <h3>① ゲームを選択</h3>
-      <p class="muted">登録したゲームを押してください。</p>
-      <div id="gameList" class="game-list"></div>
-      <p id="noGamesMessage" class="muted hidden">
-        ゲームが登録されていません。「設定」からゲームを登録してください。
-      </p>
-      <select id="gameName" class="hidden" aria-hidden="true"></select>
-    </div>
+<!-- ゲーム記録 -->
+<section id="recordPage" class="hidden">
+<button class="back-button" onclick="showPage('homePage')">← ホームに戻る</button>
+<h2>ゲーム記録</h2>
+<div class="panel">
+<h3>① ゲームを選択</h3>
+<p class="muted">登録したゲームを選んでください。</p>
+<div id="gameList" class="game-list"></div>
+<p id="noGamesMessage" class="muted hidden">ゲームがありません。設定から登録してください。</p>
+<select id="gameName" class="hidden" aria-hidden="true"></select>
+</div>
 
-    <div id="recordForm" class="hidden">
-      <div class="panel">
-        <h3>② 対局情報</h3>
-        <div class="field">
-          <label for="matchDate">対局日</label>
-          <input type="date" id="matchDate">
-        </div>
-        <p id="selectedGameLabel" class="muted"></p>
-      </div>
+<div id="recordForm" class="hidden">
+<div class="panel">
+<h3>② 対局情報</h3>
+<div class="field">
+<label for="matchDate">対局日</label>
+<input type="date" id="matchDate">
+</div>
+<p id="selectedGameLabel" class="muted"></p>
+<div id="hanaCalculatorLink" class="hidden">
+<button class="secondary full" onclick="openHanaPage()">🃏 花札の点数を計算する</button>
+<p class="muted">点数計算は専用画面で行います。</p>
+</div>
+</div>
 
-      <div id="hanaPanel" class="panel hidden">
-        <h3>花札の得点計算</h3>
-        <p class="muted">計算結果を、選択したプレイヤーの得点欄に反映できます。</p>
+<div class="panel">
+<div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
+<h3>③ プレイヤーと得点</h3>
+<button type="button" class="small-button" onclick="addRecordPlayer()">＋追加</button>
+</div>
+<p class="muted">勝利条件に従って勝者を自動判定します。</p>
+<div id="recordPlayers"></div>
+</div>
+<button class="primary full" onclick="saveMatch()">対局を保存する</button>
+</div>
+</section>
 
-        <div class="field">
-          <label for="hanaTarget">計算結果を反映するプレイヤー</label>
-          <select id="hanaTarget"></select>
-        </div>
+<!-- 花札計算専用画面 -->
+<section id="hanaPage" class="hidden">
+<button class="back-button" onclick="showPage('recordPage')">← ゲーム記録に戻る</button>
+<h2>花札の点数計算</h2>
+<div class="panel">
+<p class="muted">役と枚数を入力して得点を計算します。</p>
+<div class="field">
+<label for="hanaTarget">得点を反映するプレイヤー</label>
+<select id="hanaTarget"></select>
+</div>
+<h3>役（複数選択可）</h3>
+<div class="yaku-grid" style="margin-bottom:16px">
+<label class="yaku-option"><input type="checkbox" class="hanaYaku" value="10">五光（10点）</label>
+<label class="yaku-option"><input type="checkbox" class="hanaYaku" value="8">四光（8点）</label>
+<label class="yaku-option"><input type="checkbox" class="hanaYaku" value="7">雨四光（7点）</label>
+<label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5">三光（5点）</label>
+<label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5">猪鹿蝶（5点）</label>
+<label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5">赤短（5点）</label>
+<label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5">青短（5点）</label>
+</div>
+<div class="field">
+<label for="kasuCount">かすの枚数（10枚から1点、以降1枚ごとに1点）</label>
+<input type="number" id="kasuCount" min="0" value="0">
+</div>
+<div class="field">
+<label for="tanCount">たんの枚数（5枚から1点、以降1枚ごとに1点）</label>
+<input type="number" id="tanCount" min="0" value="0">
+</div>
+<div class="field">
+<label for="taneCount">たねの枚数（5枚から1点、以降1枚ごとに1点）</label>
+<input type="number" id="taneCount" min="0" value="0">
+</div>
+<div style="background:#f7f8fc;border-radius:10px;padding:12px;margin-bottom:14px">
+<div class="score-line"><span>役の合計</span><strong id="hanaYakuTotal">0点</strong></div>
+<div class="score-line"><span>かす・たん・たね</span><strong id="hanaExtraTotal">0点</strong></div>
+<div class="score-line"><span>倍計算前</span><strong id="hanaSubtotal">0点</strong></div>
+<div class="score-line"><span>最終得点</span><strong id="hanaFinal" class="winner">0点</strong></div>
+</div>
+<button class="primary full" onclick="applyHanaScore()">計算結果を得点に反映して戻る</button>
+</div>
+</section>
 
-        <div class="field">
-          <label>役（複数選択可）</label>
-          <div class="yaku-grid">
-            <label class="yaku-option"><input type="checkbox" class="hanaYaku" value="10"> 五光（10点）</label>
-            <label class="yaku-option"><input type="checkbox" class="hanaYaku" value="8"> 四光（8点）</label>
-            <label class="yaku-option"><input type="checkbox" class="hanaYaku" value="7"> 雨四光（7点）</label>
-            <label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5"> 三光（5点）</label>
-            <label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5"> 猪鹿蝶（5点）</label>
-            <label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5"> 赤短（5点）</label>
-            <label class="yaku-option"><input type="checkbox" class="hanaYaku" value="5"> 青短（5点）</label>
-          </div>
-        </div>
+<!-- 履歴 -->
+<section id="historyPage" class="hidden">
+<button class="back-button" onclick="showPage('homePage')">← ホームに戻る</button>
+<h2>履歴・勝率</h2>
+<div class="stats-grid" style="margin-bottom:14px">
+<div class="stat-card"><div class="stat-label">対局数</div><div id="totalMatches" class="stat-number">0</div></div>
+<div class="stat-card"><div class="stat-label">自分の勝率</div><div id="myWinRate" class="stat-number">—</div></div>
+</div>
+<div class="panel"><h3>プレイヤー別成績</h3><div id="playerStats" class="muted">まだ対局記録がありません。</div></div>
+<div class="panel"><h3>ゲーム別成績</h3><div id="gameStats" class="muted">まだ対局記録がありません。</div></div>
+<h3 style="margin-top:22px">対局履歴</h3>
+<div id="matchHistory"></div>
+</section>
 
-        <div class="field">
-          <label for="kasuCount">かすの枚数（10枚から1点、以降1枚ごとに1点）</label>
-          <input type="number" id="kasuCount" min="0" value="0">
-        </div>
-        <div class="field">
-          <label for="tanCount">たんの枚数（5枚から1点、以降1枚ごとに1点）</label>
-          <input type="number" id="tanCount" min="0" value="0">
-        </div>
-        <div class="field">
-          <label for="taneCount">たねの枚数（5枚から1点、以降1枚ごとに1点）</label>
-          <input type="number" id="taneCount" min="0" value="0">
-        </div>
-
-        <div class="panel" style="background:#f7f8fc;margin-bottom:12px">
-          <div class="score-line"><span>役の合計</span><strong id="hanaYakuTotal">0点</strong></div>
-          <div class="score-line"><span>かす・たん・たね</span><strong id="hanaExtraTotal">0点</strong></div>
-          <div class="score-line"><span>倍計算前</span><strong id="hanaSubtotal">0点</strong></div>
-          <div class="score-line"><span>最終得点</span><strong id="hanaFinal" class="winner">0点</strong></div>
-        </div>
-        <button type="button" class="primary full" onclick="applyHanaScore()">計算結果を得点に反映</button>
-      </div>
-
-      <div class="panel">
-        <div class="section-title">
-          <h3>③ プレイヤーと得点</h3>
-          <button type="button" class="small-button" onclick="addRecordPlayer()">＋追加</button>
-        </div>
-        <p class="muted">勝敗は設定した得点方式（高得点・低得点）で自動判定します。</p>
-        <div id="recordPlayers"></div>
-      </div>
-
-      <button class="primary full" onclick="saveMatch()">対局を保存する</button>
-    </div>
-  </section>
-
-  <!-- 履歴 -->
-  <section id="historyPage" class="hidden">
-    <button class="back-button" onclick="showPage('homePage')">← ホームに戻る</button>
-    <h2>履歴・勝率</h2>
-
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">対局数</div>
-        <div id="totalMatches" class="stat-number">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">自分の勝率</div>
-        <div id="myWinRate" class="stat-number">—</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>プレイヤー別成績</h3>
-      <div id="playerStats" class="muted">まだ対局記録がありません。</div>
-    </div>
-
-    <div class="panel">
-      <h3>ゲーム別成績</h3>
-      <div id="gameStats" class="muted">まだ対局記録がありません。</div>
-    </div>
-
-    <h3 style="margin-top:22px">対局履歴</h3>
-    <div id="matchHistory"></div>
-  </section>
-
-  <!-- 設定 -->
-  <section id="settingsPage" class="hidden">
-    <button class="back-button" onclick="showPage('homePage')">← ホームに戻る</button>
-    <h2>設定</h2>
-
-    <div class="panel">
-      <h3>ゲームを登録</h3>
-      <div class="field">
-        <label for="newGameName">ゲーム名</label>
-        <input id="newGameName" type="text" placeholder="例：UNO">
-      </div>
-      <button class="primary full" onclick="addGame()">ゲームを追加</button>
-      <p class="muted">花札は専用計算、それ以外のゲームは手入力で記録できます。</p>
-    </div>
-
-    <div class="panel">
-      <h3>登録済みゲーム</h3>
-      <div id="settingsGames"></div>
-    </div>
-
-    <div class="panel">
-      <h3>プレイヤー名を登録</h3>
-      <div class="field">
-        <label for="newPlayerName">プレイヤー名</label>
-        <input id="newPlayerName" type="text" placeholder="例：友達">
-      </div>
-      <button class="primary full" onclick="addPlayer()">プレイヤーを追加</button>
-    </div>
-
-    <div class="panel">
-      <h3>登録済みプレイヤー</h3>
-      <div id="settingsPlayers"></div>
-    </div>
-  </section>
+<!-- 設定 -->
+<section id="settingsPage" class="hidden">
+<button class="back-button" onclick="showPage('homePage')">← ホームに戻る</button>
+<h2>設定</h2>
+<div class="panel">
+<h3>ゲームを登録</h3>
+<div class="field"><label for="newGameName">ゲーム名</label><input id="newGameName" placeholder="例：UNO"></div>
+<button class="primary full" onclick="addGame()">ゲームを追加</button>
+<p class="muted">現在、専用の点数計算に対応しているのは花札のみです。</p>
+</div>
+<div class="panel"><h3>登録済みゲーム</h3><div id="settingsGames"></div></div>
+<div class="panel">
+<h3>プレイヤー名を登録</h3>
+<div class="field"><label for="newPlayerName">プレイヤー名</label><input id="newPlayerName" placeholder="例：友達"></div>
+<button class="primary full" onclick="addPlayer()">プレイヤーを追加</button>
+</div>
+<div class="panel"><h3>登録済みプレイヤー</h3><div id="settingsPlayers"></div></div>
+</section>
 </main>
 
 <script>
-const MATCH_KEY = "boardgame-winrate-v1";
-const CONFIG_KEY = "boardgame-winrate-settings-v1";
+const MATCH_KEY="boardgame-winrate-v1";
+const CONFIG_KEY="boardgame-winrate-settings-v1";
 
-function defaultConfig() {
-  return {
-    games: [{ name: "花札", mode: "high", scoreType: "custom" }],
-    people: ["自分", "相手"]
-  };
+function defaultConfig(){
+ return {games:[{name:"花札",mode:"high",scoreType:"custom"}],people:["自分","相手"]};
+}
+function loadConfig(){
+ try{
+  const s=JSON.parse(localStorage.getItem(CONFIG_KEY));
+  if(!s||!Array.isArray(s.games)||!Array.isArray(s.people))return defaultConfig();
+  s.games=s.games.map(g=>{
+   if(typeof g==="string")return {name:g,mode:"high",scoreType:g==="花札"?"custom":"manual"};
+   return {name:g.name,mode:g.mode==="low"?"low":"high",scoreType:g.scoreType||(g.name==="花札"?"custom":"manual")};
+  }).filter(g=>g.name);
+  s.people=s.people.map(String);
+  return s;
+ }catch{return defaultConfig();}
+}
+function loadMatches(){
+ try{const s=JSON.parse(localStorage.getItem(MATCH_KEY));return Array.isArray(s)?s:[];}
+ catch{return [];}
+}
+let config=loadConfig();
+let matches=loadMatches();
+let recordPlayerCount=0;
+let hanaReturnPage="recordPage";
+
+function saveConfig(){localStorage.setItem(CONFIG_KEY,JSON.stringify(config));}
+function saveMatches(){localStorage.setItem(MATCH_KEY,JSON.stringify(matches));}
+function getGame(name){return config.games.find(g=>g.name===name);}
+function todayString(){
+ const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
 
-function loadConfig() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
-    if (!saved || !Array.isArray(saved.games) || !Array.isArray(saved.people)) {
-      return defaultConfig();
-    }
-    saved.games = saved.games.map(g => {
-      if (typeof g === "string") {
-        return {
-          name: g,
-          mode: "high",
-          scoreType: g === "花札" ? "custom" : "manual"
-        };
-      }
-      return {
-        name: g.name,
-        mode: g.mode === "low" ? "low" : "high",
-        scoreType: g.scoreType || (g.name === "花札" ? "custom" : "manual")
-      };
-    }).filter(g => g.name);
-    saved.people = saved.people.map(String);
-    return saved;
-  } catch {
-    return defaultConfig();
-  }
-}
-
-let config = loadConfig();
-
-function loadMatches() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(MATCH_KEY));
-    return Array.isArray(saved) ? saved : [];
-  } catch {
-    return [];
-  }
-}
-
-let matches = loadMatches();
-let recordPlayerCount = 2;
-
-function saveConfig() {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-}
-
-function saveMatches() {
-  localStorage.setItem(MATCH_KEY, JSON.stringify(matches));
-}
-
-function showPage(pageId) {
-  document.querySelectorAll("main > section").forEach(section => {
-    section.classList.add("hidden");
-  });
-  document.getElementById(pageId).classList.remove("hidden");
-
-  if (pageId === "recordPage") {
-    renderGameList();
-    if (!document.getElementById("matchDate").value) {
-      document.getElementById("matchDate").value = todayString();
-    }
-  }
-  if (pageId === "historyPage") renderHistory();
-  if (pageId === "settingsPage") renderSettings();
-  if (pageId === "homePage") renderHome();
-}
-
-function todayString() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
-}
-
-function getGame(name) {
-  return config.games.find(g => g.name === name);
-}
-
-/* ゲーム一覧 */
-function renderGameList() {
-  const list = document.getElementById("gameList");
-  const select = document.getElementById("gameName");
-  list.innerHTML = "";
-  select.innerHTML = "";
-
-  config.games.forEach(game => {
-    const option = document.createElement("option");
-    option.value = game.name;
-    option.textContent = game.name;
-    select.appendChild(option);
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "game-choice";
-    button.textContent = game.name;
-
-    if (select.value === game.name) {
-      button.classList.add("selected");
-    }
-
-    button.addEventListener("click", () => {
-      select.value = game.name;
-      gameChanged();
-    });
-
-    list.appendChild(button);
-  });
-
-  document.getElementById("noGamesMessage").classList.toggle("hidden", config.games.length > 0);
-  document.getElementById("recordForm").classList.toggle("hidden", !select.value);
-
-  if (select.value) {
-    gameChanged();
-  } else {
-    document.getElementById("recordForm").classList.add("hidden");
-  }
-}
-
-function gameChanged() {
-  const select = document.getElementById("gameName");
-  const gameName = select.value;
-  const game = getGame(gameName);
-
-  document.querySelectorAll(".game-choice").forEach(button => {
-    button.classList.toggle("selected", button.textContent === gameName);
-  });
-
-  document.getElementById("recordForm").classList.toggle("hidden", !game);
-  if (!game) return;
-
-  document.getElementById("selectedGameLabel").textContent =
-    "選択中のゲーム：" + gameName;
-
-  document.getElementById("hanaPanel").classList.toggle(
-    "hidden",
-    !(gameName === "花札" && game.scoreType === "custom")
-  );
-
-  renderHanaTarget();
+function showPage(id){
+ document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
+ document.getElementById(id).classList.remove("hidden");
+ if(id==="recordPage"){
   renderGameList();
+  if(!document.getElementById("matchDate").value)document.getElementById("matchDate").value=todayString();
+ }
+ if(id==="hanaPage")renderHanaTarget();
+ if(id==="historyPage")renderHistory();
+ if(id==="settingsPage")renderSettings();
+ if(id==="homePage")renderHome();
 }
 
-function renderHanaTarget() {
-  const target = document.getElementById("hanaTarget");
-  const previous = target.value;
-  target.innerHTML = "";
+/* ゲーム一覧：選択状態を保持して表示する */
+function renderGameList(){
+ const select=document.getElementById("gameName");
+ const list=document.getElementById("gameList");
+ const previous=select.value;
+ select.innerHTML="";
+ list.innerHTML="";
 
-  for (let i = 0; i < recordPlayerCount; i++) {
-    const playerSelect = document.getElementById("recordPlayer" + i);
-    const name = playerSelect ? playerSelect.value : "";
-    const option = document.createElement("option");
-    option.value = String(i);
-    option.textContent = name || ("プレイヤー" + (i + 1));
-    target.appendChild(option);
-  }
+ config.games.forEach(game=>{
+  const option=document.createElement("option");
+  option.value=game.name;
+  option.textContent=game.name;
+  select.appendChild(option);
+ });
 
-  if (previous !== "" && Number(previous) < recordPlayerCount) {
-    target.value = previous;
-  }
-}
+ if(config.games.some(g=>g.name===previous))select.value=previous;
+ else if(config.games.length)select.value=config.games[0].name;
 
-/* 対局プレイヤー欄 */
-function addRecordPlayer() {
-  if (recordPlayerCount >= 4) {
-    alert("プレイヤーは最大4人までです。");
-    return;
-  }
-
-  const count = recordPlayerCount++;
-  const container = document.getElementById("recordPlayers");
-  const row = document.createElement("div");
-  row.className = "player-row";
-  row.id = "recordRow" + count;
-
-  const nameWrap = document.createElement("div");
-  const nameLabel = document.createElement("label");
-  nameLabel.htmlFor = "recordPlayer" + count;
-  nameLabel.textContent = "プレイヤー" + (count + 1);
-  const nameSelect = document.createElement("select");
-  nameSelect.id = "recordPlayer" + count;
-
-  const blank = document.createElement("option");
-  blank.value = "";
-  blank.textContent = "名前を選択";
-  nameSelect.appendChild(blank);
-
-  config.people.forEach(name => {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    nameSelect.appendChild(option);
+ config.games.forEach(game=>{
+  const button=document.createElement("button");
+  button.type="button";
+  button.className="game-choice";
+  button.textContent=game.name;
+  button.classList.toggle("selected",select.value===game.name);
+  button.addEventListener("click",()=>{
+   select.value=game.name;
+   gameChanged();
   });
+  list.appendChild(button);
+ });
 
-  if (config.people[count]) nameSelect.value = config.people[count];
-  nameSelect.addEventListener("change", renderHanaTarget);
-  nameWrap.append(nameLabel, nameSelect);
-
-  const scoreWrap = document.createElement("div");
-  scoreWrap.className = "score-wrap";
-  const scoreLabel = document.createElement("label");
-  scoreLabel.htmlFor = "recordScore" + count;
-  scoreLabel.textContent = "得点";
-  const scoreInput = document.createElement("input");
-  scoreInput.type = "number";
-  scoreInput.id = "recordScore" + count;
-  scoreInput.value = "0";
-  scoreInput.step = "1";
-  scoreWrap.append(scoreLabel, scoreInput);
-
-  row.append(nameWrap, scoreWrap);
-  container.appendChild(row);
-  renderHanaTarget();
+ document.getElementById("noGamesMessage").classList.toggle("hidden",config.games.length>0);
+ document.getElementById("recordForm").classList.toggle("hidden",!select.value);
+ updateRecordGame();
 }
 
-function resetRecordPlayers() {
-  recordPlayerCount = 0;
-  document.getElementById("recordPlayers").innerHTML = "";
-  addRecordPlayer();
-  addRecordPlayer();
-  renderHanaTarget();
+function gameChanged(){
+ const select=document.getElementById("gameName");
+ document.querySelectorAll(".game-choice").forEach(button=>{
+  button.classList.toggle("selected",button.textContent===select.value);
+ });
+ updateRecordGame();
 }
 
-/* 花札の計算 */
-function countInput(id) {
-  const value = Number(document.getElementById(id).value);
-  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+function updateRecordGame(){
+ const name=document.getElementById("gameName").value;
+ const game=getGame(name);
+ document.getElementById("recordForm").classList.toggle("hidden",!game);
+ if(!game)return;
+
+ document.getElementById("selectedGameLabel").textContent="選択中のゲーム："+name;
+ document.getElementById("hanaCalculatorLink").classList.toggle(
+  "hidden",!(name==="花札"&&game.scoreType==="custom")
+ );
+ renderHanaTarget();
 }
 
-function calcHana() {
-  let yakuTotal = 0;
-  document.querySelectorAll(".hanaYaku:checked").forEach(input => {
-    yakuTotal += Number(input.value);
-  });
+/* プレイヤーと得点 */
+function addRecordPlayer(){
+ if(recordPlayerCount>=4){alert("プレイヤーは最大4人までです。");return;}
+ const i=recordPlayerCount++;
+ const row=document.createElement("div");
+ row.className="player-row";
+ row.id="recordRow"+i;
 
-  const kasu = countInput("kasuCount");
-  const tan = countInput("tanCount");
-  const tane = countInput("taneCount");
+ const nw=document.createElement("div");
+ const nl=document.createElement("label");
+ nl.htmlFor="recordPlayer"+i;
+ nl.textContent="プレイヤー"+(i+1);
+ const ns=document.createElement("select");
+ ns.id="recordPlayer"+i;
+ const blank=document.createElement("option");
+ blank.value="";blank.textContent="名前を選択";ns.appendChild(blank);
+ config.people.forEach(name=>{
+  const o=document.createElement("option");o.value=name;o.textContent=name;ns.appendChild(o);
+ });
+ if(config.people[i])ns.value=config.people[i];
+ ns.addEventListener("change",renderHanaTarget);
+ nw.append(nl,ns);
 
-  const extra =
-    Math.max(0, kasu >= 10 ? kasu - 9 : 0) +
-    Math.max(0, tan >= 5 ? tan - 4 : 0) +
-    Math.max(0, tane >= 5 ? tane - 4 : 0);
-
-  const subtotal = yakuTotal + extra;
-  const finalScore = subtotal >= 7 ? subtotal * 2 : subtotal;
-
-  document.getElementById("hanaYakuTotal").textContent = yakuTotal + "点";
-  document.getElementById("hanaExtraTotal").textContent = extra + "点";
-  document.getElementById("hanaSubtotal").textContent = subtotal + "点";
-  document.getElementById("hanaFinal").textContent = finalScore + "点";
-
-  return finalScore;
+ const sw=document.createElement("div");
+ const sl=document.createElement("label");
+ sl.htmlFor="recordScore"+i;sl.textContent="得点";
+ const score=document.createElement("input");
+ score.type="number";score.id="recordScore"+i;score.value="0";score.step="1";
+ sw.append(sl,score);
+ row.append(nw,sw);
+ document.getElementById("recordPlayers").appendChild(row);
+ renderHanaTarget();
+}
+function resetRecordPlayers(){
+ recordPlayerCount=0;
+ document.getElementById("recordPlayers").innerHTML="";
+ addRecordPlayer();addRecordPlayer();
+}
+function renderHanaTarget(){
+ const target=document.getElementById("hanaTarget");
+ if(!target)return;
+ const previous=target.value;
+ target.innerHTML="";
+ for(let i=0;i<recordPlayerCount;i++){
+  const select=document.getElementById("recordPlayer"+i);
+  const o=document.createElement("option");
+  o.value=String(i);
+  o.textContent=select&&select.value?select.value:"プレイヤー"+(i+1);
+  target.appendChild(o);
+ }
+ if(previous!==""&&Number(previous)<recordPlayerCount)target.value=previous;
 }
 
-function applyHanaScore() {
-  const target = Number(document.getElementById("hanaTarget").value);
-  const input = document.getElementById("recordScore" + target);
-  if (!input) {
-    alert("得点を反映するプレイヤーを選択してください。");
-    return;
-  }
-  input.value = String(calcHana());
-  alert("得点を反映しました。");
+/* 花札計算専用ページ */
+function openHanaPage(){
+ const game=getGame(document.getElementById("gameName").value);
+ if(!game||game.name!=="花札"||game.scoreType!=="custom"){
+  alert("花札の専用計算が設定されていません。");return;
+ }
+ hanaReturnPage="recordPage";
+ renderHanaTarget();
+ showPage("hanaPage");
+}
+function countInput(id){
+ const n=Number(document.getElementById(id).value);
+ return Number.isFinite(n)?Math.max(0,Math.floor(n)):0;
+}
+function calcHana(){
+ let yaku=0;
+ document.querySelectorAll(".hanaYaku:checked").forEach(input=>yaku+=Number(input.value));
+ const kasu=countInput("kasuCount");
+ const tan=countInput("tanCount");
+ const tane=countInput("taneCount");
+ const extra=Math.max(0,kasu-9)+Math.max(0,tan-4)+Math.max(0,tane-4);
+ const subtotal=yaku+extra;
+ const finalScore=subtotal>=7?subtotal*2:subtotal;
+ document.getElementById("hanaYakuTotal").textContent=yaku+"点";
+ document.getElementById("hanaExtraTotal").textContent=extra+"点";
+ document.getElementById("hanaSubtotal").textContent=subtotal+"点";
+ document.getElementById("hanaFinal").textContent=finalScore+"点";
+ return finalScore;
+}
+function applyHanaScore(){
+ const i=Number(document.getElementById("hanaTarget").value);
+ const input=document.getElementById("recordScore"+i);
+ if(!input){alert("得点を反映するプレイヤーを選択してください。");return;}
+ input.value=String(calcHana());
+ showPage("recordPage");
 }
 
-document.querySelectorAll(".hanaYaku").forEach(input => {
-  input.addEventListener("change", calcHana);
-});
-["kasuCount", "tanCount", "taneCount"].forEach(id => {
-  document.getElementById(id).addEventListener("input", calcHana);
-});
-
-/* 対局の保存 */
-function saveMatch() {
-  const gameName = document.getElementById("gameName").value;
-  const game = getGame(gameName);
-  if (!game) {
-    alert("先にゲームを選択してください。");
-    return;
-  }
-
-  const date = document.getElementById("matchDate").value || todayString();
-  const players = [];
-
-  for (let i = 0; i < recordPlayerCount; i++) {
-    const nameInput = document.getElementById("recordPlayer" + i);
-    const scoreInput = document.getElementById("recordScore" + i);
-    if (!nameInput || !scoreInput) continue;
-
-    const name = nameInput.value.trim();
-    if (!name) {
-      alert("プレイヤー" + (i + 1) + "の名前を選択してください。");
-      return;
-    }
-
-    const score = Number(scoreInput.value);
-    if (!Number.isFinite(score)) {
-      alert("得点を正しく入力してください。");
-      return;
-    }
-
-    if (players.some(p => p.name === name)) {
-      alert("同じプレイヤー名が複数選択されています。別の名前を選んでください。");
-      return;
-    }
-
-    players.push({ name, score });
-  }
-
-  if (players.length < 2) {
-    alert("2人以上のプレイヤーを設定してください。");
-    return;
-  }
-
-  const bestScore = game.mode === "low"
-    ? Math.min(...players.map(p => p.score))
-    : Math.max(...players.map(p => p.score));
-
-  const winners = players
-    .filter(p => p.score === bestScore)
-    .map(p => p.name);
-
-  const match = {
-    id: Date.now().toString() + Math.random().toString(16).slice(2),
-    date,
-    game: gameName,
-    players,
-    winners
-  };
-
-  matches.unshift(match);
-  saveMatches();
-
-  alert("対局を保存しました！");
-  resetRecordPlayers();
-  document.getElementById("matchDate").value = todayString();
-  showPage("historyPage");
-}
-
-/* 古い記録もできる範囲で読み取る */
-function normalizeMatch(match) {
-  if (!match || typeof match !== "object") return null;
-
-  const game = match.game || match.gameName || match.name || "不明なゲーム";
-  const date = match.date || match.matchDate || "";
-  let rawPlayers = match.players || match.results || [];
-
-  if (!Array.isArray(rawPlayers) && rawPlayers && typeof rawPlayers === "object") {
-    rawPlayers = Object.entries(rawPlayers).map(([name, score]) => ({ name, score }));
-  }
-
-  const players = rawPlayers.map((p, i) => {
-    if (typeof p === "string") return { name: p, score: 0 };
-    return {
-      name: p.name || p.player || p.playerName || ("プレイヤー" + (i + 1)),
-      score: Number(p.score ?? p.points ?? 0)
-    };
-  });
-
-  let winners = Array.isArray(match.winners) ? match.winners : [];
-  if (!winners.length && players.length) {
-    const mode = getGame(game)?.mode || "high";
-    const best = mode === "low"
-      ? Math.min(...players.map(p => p.score))
-      : Math.max(...players.map(p => p.score));
-    winners = players.filter(p => p.score === best).map(p => p.name);
-  }
-
-  return {
-    ...match,
-    id: match.id || match.matchId || (date + game + Math.random()),
-    date,
-    game,
-    players,
-    winners
-  };
-}
-
-function getNormalizedMatches() {
-  return matches.map(normalizeMatch).filter(Boolean);
-}
-
-/* 履歴と成績 */
-function renderHistory() {
-  const all = getNormalizedMatches();
-  document.getElementById("totalMatches").textContent = all.length;
-
-  const me = "自分";
-  let myGames = 0;
-  let myWins = 0;
-
-  all.forEach(match => {
-    if (match.players.some(p => p.name === me)) {
-      myGames++;
-      if (match.winners.includes(me)) myWins++;
-    }
-  });
-
-  document.getElementById("myWinRate").textContent =
-    myGames ? Math.round(myWins / myGames * 100) + "%" : "—";
-
-  const playerMap = {};
-  const gameMap = {};
-
-  all.forEach(match => {
-    match.players.forEach(player => {
-      if (!playerMap[player.name]) {
-        playerMap[player.name] = { games: 0, wins: 0, score: 0 };
-      }
-      playerMap[player.name].games++;
-      playerMap[player.name].score += player.score;
-      if (match.winners.includes(player.name)) playerMap[player.name].wins++;
-    });
-
-    if (!gameMap[match.game]) gameMap[match.game] = { games: 0, wins: 0 };
-    gameMap[match.game].games++;
-    if (match.winners.includes(me)) gameMap[match.game].wins++;
-  });
-
-  const playerStats = document.getElementById("playerStats");
-  playerStats.innerHTML = "";
-  if (!Object.keys(playerMap).length) {
-    playerStats.textContent = "まだ対局記録がありません。";
-  } else {
-    Object.entries(playerMap).sort((a, b) => b[1].wins - a[1].wins).forEach(([name, s]) => {
-      const rate = Math.round(s.wins / s.games * 100);
-      const row = document.createElement("div");
-      row.className = "list-row";
-      const left = document.createElement("div");
-      left.className = "item-main";
-      const strong = document.createElement("strong");
-      strong.textContent = name;
-      const small = document.createElement("div");
-      small.className = "muted";
-      small.textContent = s.games + "対局・平均得点 " + (s.score / s.games).toFixed(1);
-      left.append(strong, small);
-      const right = document.createElement("div");
-      right.style.textAlign = "right";
-      right.innerHTML = "<strong>" + s.wins + "勝</strong><div class='muted'>" + rate + "%</div>";
-      row.append(left, right);
-      playerStats.appendChild(row);
-    });
-  }
-
-  const gameStats = document.getElementById("gameStats");
-  gameStats.innerHTML = "";
-  if (!Object.keys(gameMap).length) {
-    gameStats.textContent = "まだ対局記録がありません。";
-  } else {
-    Object.entries(gameMap).forEach(([name, s]) => {
-      const row = document.createElement("div");
-      row.className = "list-row";
-      const left = document.createElement("strong");
-      left.textContent = name;
-      const right = document.createElement("span");
-      right.textContent = s.games + "対局・自分 " + s.wins + "勝";
-      row.append(left, right);
-      gameStats.appendChild(row);
-    });
-  }
-
-  const history = document.getElementById("matchHistory");
-  history.innerHTML = "";
-  if (!all.length) {
-    history.textContent = "まだ対局記録がありません。";
-    history.className = "muted";
-    return;
-  }
-  history.className = "";
-
-  all.forEach(match => {
-    const card = document.createElement("div");
-    card.className = "match-card";
-
-    const title = document.createElement("h3");
-    title.textContent = match.game;
-    const meta = document.createElement("div");
-    meta.className = "match-meta";
-    meta.textContent = match.date || "日付不明";
-
-    card.append(title, meta);
-
-    match.players.forEach(player => {
-      const line = document.createElement("div");
-      line.className = "score-line";
-      const name = document.createElement("span");
-      name.textContent = player.name;
-      if (match.winners.includes(player.name)) name.className = "winner";
-      const score = document.createElement("strong");
-      score.textContent = player.score + "点";
-      line.append(name, score);
-      card.appendChild(line);
-    });
-
-    const winnersText = document.createElement("p");
-    winnersText.className = "muted";
-    winnersText.textContent = "勝者：" + (match.winners.length ? match.winners.join("・") : "なし");
-    card.appendChild(winnersText);
-
-    const deleteButton = document.createElement("button");
-    deleteButton.className = "danger";
-    deleteButton.textContent = "この記録を削除";
-    deleteButton.addEventListener("click", () => deleteMatch(match.id));
-    card.appendChild(deleteButton);
-
-    history.appendChild(card);
-  });
-}
-
-function deleteMatch(id) {
-  if (!confirm("この対局記録を削除しますか？")) return;
-  matches = getNormalizedMatches().filter(m => m.id !== id);
-  saveMatches();
-  renderHistory();
+/* 記録保存 */
+function saveMatch(){
+ const gameName=document.getElementById("gameName").value;
+ const game=getGame(gameName);
+ if(!game){alert("ゲームを選択してください。");return;}
+ const players=[];
+ for(let i=0;i<recordPlayerCount;i++){
+  const nameInput=document.getElementById("recordPlayer"+i);
+  const scoreInput=document.getElementById("recordScore"+i);
+  const name=nameInput.value.trim();
+  if(!name){alert("プレイヤー"+(i+1)+"の名前を選択してください。");return;}
+  if(players.some(p=>p.name===name)){alert("同じ名前が複数選択されています。");return;}
+  const score=Number(scoreInput.value);
+  if(!Number.isFinite(score)){alert("得点を確認してください。");return;}
+  players.push({name,score});
+ }
+ if(players.length<2){alert("2人以上のプレイヤーを設定してください。");return;}
+ const best=game.mode==="low"?Math.min(...players.map(p=>p.score)):Math.max(...players.map(p=>p.score));
+ const winners=players.filter(p=>p.score===best).map(p=>p.name);
+ matches.unshift({
+  id:Date.now().toString()+Math.random().toString(16).slice(2),
+  date:document.getElementById("matchDate").value||todayString(),
+  game:gameName,players,winners
+ });
+ saveMatches();
+ alert("対局を保存しました！");
+ resetRecordPlayers();
+ document.getElementById("matchDate").value=todayString();
+ showPage("historyPage");
 }
 
 /* 設定 */
-function addGame() {
-  const input = document.getElementById("newGameName");
-  const name = input.value.trim();
-  if (!name) {
-    alert("ゲーム名を入力してください。");
-    return;
-  }
-  if (config.games.some(g => g.name === name)) {
-    alert("そのゲームはすでに登録されています。");
-    return;
-  }
+function addGame(){
+ const input=document.getElementById("newGameName");
+ const name=input.value.trim();
+ if(!name){alert("ゲーム名を入力してください。");return;}
+ if(config.games.some(g=>g.name===name)){alert("そのゲームは登録済みです。");return;}
+ config.games.push({name,mode:"high",scoreType:name==="花札"?"custom":"manual"});
+ saveConfig();input.value="";
+ renderSettings();renderGameList();
+}
+function removeGame(name){
+ if(!confirm("「"+name+"」を登録ゲームから削除しますか？\n対局履歴は削除されません。"))return;
+ config.games=config.games.filter(g=>g.name!==name);
+ saveConfig();renderSettings();renderGameList();
+}
+function changeGameMode(name,mode){
+ const g=getGame(name);if(!g)return;
+ g.mode=mode==="low"?"low":"high";saveConfig();
+}
+function changeScoreType(name,type){
+ const g=getGame(name);if(!g)return;
+ if(type==="custom"&&name!=="花札"){
+  alert("現在、専用計算に対応しているのは花札のみです。");
+  renderSettings();return;
+ }
+ g.scoreType=type;saveConfig();renderSettings();renderGameList();
+}
+function addPlayer(){
+ const input=document.getElementById("newPlayerName");
+ const name=input.value.trim();
+ if(!name){alert("プレイヤー名を入力してください。");return;}
+ if(config.people.includes(name)){alert("そのプレイヤーは登録済みです。");return;}
+ config.people.push(name);saveConfig();input.value="";renderSettings();
+}
+function removePlayer(name){
+ if(!confirm("「"+name+"」を登録プレイヤーから削除しますか？"))return;
+ config.people=config.people.filter(p=>p!==name);
+ saveConfig();renderSettings();
+}
+function renderSettings(){
+ const games=document.getElementById("settingsGames");
+ games.innerHTML="";
+ if(!config.games.length){games.textContent="登録ゲームはありません。";}
+ config.games.forEach(game=>{
+  const card=document.createElement("div");card.className="game-card";
+  const title=document.createElement("h3");title.textContent=game.name;card.appendChild(title);
 
-  config.games.push({
-    name,
-    mode: "high",
-    scoreType: name === "花札" ? "custom" : "manual"
+  const modeLabel=document.createElement("label");modeLabel.textContent="勝利条件";
+  const mode=document.createElement("select");
+  [["high","高得点が勝ち"],["low","低得点が勝ち"]].forEach(([v,t])=>{
+   const o=document.createElement("option");o.value=v;o.textContent=t;mode.appendChild(o);
   });
+  mode.value=game.mode||"high";mode.addEventListener("change",()=>changeGameMode(game.name,mode.value));
+  card.append(modeLabel,mode);
 
-  saveConfig();
-  input.value = "";
-  renderSettings();
-  renderGameList();
-}
-
-function removeGame(name) {
-  if (!confirm("「" + name + "」を登録ゲームから削除しますか？\n過去の対局履歴は削除されません。")) return;
-  config.games = config.games.filter(g => g.name !== name);
-  saveConfig();
-  renderSettings();
-  renderGameList();
-}
-
-function changeGameMode(name, mode) {
-  const game = getGame(name);
-  if (!game) return;
-  game.mode = mode === "low" ? "low" : "high";
-  saveConfig();
-}
-
-function changeScoreType(name, scoreType) {
-  const game = getGame(name);
-  if (!game) return;
-
-  if (scoreType === "custom" && name !== "花札") {
-    alert("現在、専用計算に対応しているのは花札のみです。");
-    renderSettings();
-    return;
-  }
-
-  game.scoreType = scoreType;
-  saveConfig();
-  renderSettings();
-  gameChanged();
-}
-
-function addPlayer() {
-  const input = document.getElementById("newPlayerName");
-  const name = input.value.trim();
-  if (!name) {
-    alert("プレイヤー名を入力してください。");
-    return;
-  }
-  if (config.people.includes(name)) {
-    alert("そのプレイヤーはすでに登録されています。");
-    return;
-  }
-
-  config.people.push(name);
-  saveConfig();
-  input.value = "";
-  renderSettings();
-}
-
-function removePlayer(name) {
-  if (!confirm("「" + name + "」を登録プレイヤーから削除しますか？")) return;
-  config.people = config.people.filter(p => p !== name);
-  saveConfig();
-  renderSettings();
-}
-
-function renderSettings() {
-  const games = document.getElementById("settingsGames");
-  games.innerHTML = "";
-
-  if (!config.games.length) {
-    games.textContent = "登録ゲームはありません。";
-    games.className = "muted";
-  } else {
-    games.className = "";
-    config.games.forEach(game => {
-      const card = document.createElement("div");
-      card.className = "game-card";
-
-      const title = document.createElement("h3");
-      title.textContent = game.name;
-      card.appendChild(title);
-
-      const modeField = document.createElement("div");
-      modeField.className = "field";
-      const modeLabel = document.createElement("label");
-      modeLabel.textContent = "勝利条件";
-      const modeSelect = document.createElement("select");
-      [
-        { value: "high", text: "高得点が勝ち" },
-        { value: "low", text: "低得点が勝ち" }
-      ].forEach(item => {
-        const option = document.createElement("option");
-        option.value = item.value;
-        option.textContent = item.text;
-        modeSelect.appendChild(option);
-      });
-      modeSelect.value = game.mode || "high";
-      modeSelect.addEventListener("change", () => changeGameMode(game.name, modeSelect.value));
-      modeField.append(modeLabel, modeSelect);
-      card.appendChild(modeField);
-
-      const typeField = document.createElement("div");
-      typeField.className = "field";
-      const typeLabel = document.createElement("label");
-      typeLabel.textContent = "得点方式";
-      const typeSelect = document.createElement("select");
-      [
-        { value: "manual", text: "手入力" },
-        { value: "custom", text: "専用計算" }
-      ].forEach(item => {
-        const option = document.createElement("option");
-        option.value = item.value;
-        option.textContent = item.text;
-        typeSelect.appendChild(option);
-      });
-      typeSelect.value = game.scoreType || "manual";
-      typeSelect.addEventListener("change", () => changeScoreType(game.name, typeSelect.value));
-      typeField.append(typeLabel, typeSelect);
-      card.appendChild(typeField);
-
-      const note = document.createElement("p");
-      note.className = "muted";
-      note.textContent = game.name === "花札"
-        ? "花札の役・枚数から得点を計算できます。"
-        : "現在は得点を手入力する方式です。";
-      card.appendChild(note);
-
-      const removeButton = document.createElement("button");
-      removeButton.className = "danger";
-      removeButton.textContent = "ゲームを削除";
-      removeButton.addEventListener("click", () => removeGame(game.name));
-      card.appendChild(removeButton);
-
-      games.appendChild(card);
-    });
-  }
-
-  const people = document.getElementById("settingsPlayers");
-  people.innerHTML = "";
-
-  if (!config.people.length) {
-    people.textContent = "登録プレイヤーはありません。";
-    people.className = "muted";
-  } else {
-    people.className = "";
-    config.people.forEach(name => {
-      const row = document.createElement("div");
-      row.className = "list-row";
-      const title = document.createElement("span");
-      title.textContent = name;
-      const button = document.createElement("button");
-      button.className = "danger";
-      button.textContent = "削除";
-      button.addEventListener("click", () => removePlayer(name));
-      row.append(title, button);
-      people.appendChild(row);
-    });
-  }
-}
-
-/* ホーム画面の最近の対局 */
-function renderHome() {
-  const recent = document.getElementById("recentMatches");
-  recent.innerHTML = "";
-  const all = getNormalizedMatches().slice(0, 3);
-
-  if (!all.length) {
-    recent.textContent = "まだ対局記録がありません。";
-    recent.className = "muted";
-    return;
-  }
-
-  recent.className = "";
-  all.forEach(match => {
-    const row = document.createElement("div");
-    row.className = "list-row";
-
-    const left = document.createElement("div");
-    left.className = "item-main";
-    const title = document.createElement("strong");
-    title.textContent = match.game;
-    const date = document.createElement("div");
-    date.className = "muted";
-    date.textContent = match.date || "日付不明";
-    left.append(title, date);
-
-    const right = document.createElement("span");
-    right.className = "winner";
-    right.textContent = match.winners.join("・") || "勝者なし";
-    row.append(left, right);
-    recent.appendChild(row);
+  const typeLabel=document.createElement("label");typeLabel.style.marginTop="12px";typeLabel.textContent="得点方式";
+  const type=document.createElement("select");
+  [["manual","手入力"],["custom","専用計算"]].forEach(([v,t])=>{
+   const o=document.createElement("option");o.value=v;o.textContent=t;type.appendChild(o);
   });
+  type.value=game.scoreType||"manual";
+  type.addEventListener("change",()=>changeScoreType(game.name,type.value));
+  card.append(typeLabel,type);
+
+  const note=document.createElement("p");note.className="muted";
+  note.textContent=game.name==="花札"?"専用画面で役や枚数から計算できます。":"得点を手入力します。";
+  card.appendChild(note);
+  const del=document.createElement("button");del.className="danger";del.textContent="ゲームを削除";
+  del.style.marginTop="8px";del.addEventListener("click",()=>removeGame(game.name));card.appendChild(del);
+  games.appendChild(card);
+ });
+
+ const people=document.getElementById("settingsPlayers");people.innerHTML="";
+ if(!config.people.length)people.textContent="登録プレイヤーはありません。";
+ config.people.forEach(name=>{
+  const row=document.createElement("div");row.className="list-row";
+  const title=document.createElement("span");title.textContent=name;
+  const del=document.createElement("button");del.className="danger";del.textContent="削除";
+  del.addEventListener("click",()=>removePlayer(name));
+  row.append(title,del);people.appendChild(row);
+ });
+}
+
+/* 古い記録の読み込み補助 */
+function normalizeMatch(m){
+ if(!m||typeof m!=="object")return null;
+ const game=m.game||m.gameName||m.name||"不明なゲーム";
+ let raw=m.players||m.results||[];
+ if(!Array.isArray(raw)&&raw&&typeof raw==="object"){
+  raw=Object.entries(raw).map(([name,score])=>({name,score}));
+ }
+ const players=raw.map((p,i)=>typeof p==="string"?{name:p,score:0}:{
+  name:p.name||p.player||p.playerName||("プレイヤー"+(i+1)),
+  score:Number(p.score??p.points??0)
+ });
+ let winners=Array.isArray(m.winners)?m.winners:[];
+ if(!winners.length&&players.length){
+  const mode=getGame(game)?.mode||"high";
+  const best=mode==="low"?Math.min(...players.map(p=>p.score)):Math.max(...players.map(p=>p.score));
+  winners=players.filter(p=>p.score===best).map(p=>p.name);
+ }
+ return {...m,id:m.id||m.matchId||String(m.date||"")+game+Math.random(),date:m.date||m.matchDate||"",game,players,winners};
+}
+function normalizedMatches(){return matches.map(normalizeMatch).filter(Boolean);}
+
+/* 履歴・勝率 */
+function renderHistory(){
+ const all=normalizedMatches();
+ document.getElementById("totalMatches").textContent=all.length;
+ const my=all.filter(m=>m.players.some(p=>p.name==="自分"));
+ const wins=my.filter(m=>m.winners.includes("自分")).length;
+ document.getElementById("myWinRate").textContent=my.length?Math.round(wins/my.length*100)+"%":"—";
+
+ const playerMap={};const gameMap={};
+ all.forEach(m=>{
+  m.players.forEach(p=>{
+   if(!playerMap[p.name])playerMap[p.name]={games:0,wins:0,score:0};
+   playerMap[p.name].games++;playerMap[p.name].score+=p.score;
+   if(m.winners.includes(p.name))playerMap[p.name].wins++;
+  });
+  if(!gameMap[m.game])gameMap[m.game]={games:0,myWins:0};
+  gameMap[m.game].games++;
+  if(m.winners.includes("自分"))gameMap[m.game].myWins++;
+ });
+
+ const ps=document.getElementById("playerStats");ps.innerHTML="";
+ if(!Object.keys(playerMap).length)ps.textContent="まだ対局記録がありません。";
+ Object.entries(playerMap).forEach(([name,s])=>{
+  const row=document.createElement("div");row.className="list-row";
+  const left=document.createElement("div");left.className="item-main";
+  const title=document.createElement("strong");title.textContent=name;
+  const small=document.createElement("div");small.className="muted";
+  small.textContent=s.games+"対局・平均得点 "+(s.score/s.games).toFixed(1);
+  left.append(title,small);
+  const right=document.createElement("span");
+  right.textContent=s.wins+"勝 / "+Math.round(s.wins/s.games*100)+"%";
+  row.append(left,right);ps.appendChild(row);
+ });
+
+ const gs=document.getElementById("gameStats");gs.innerHTML="";
+ if(!Object.keys(gameMap).length)gs.textContent="まだ対局記録がありません。";
+ Object.entries(gameMap).forEach(([name,s])=>{
+  const row=document.createElement("div");row.className="list-row";
+  const left=document.createElement("strong");left.textContent=name;
+  const right=document.createElement("span");right.textContent=s.games+"対局・自分 "+s.myWins+"勝";
+  row.append(left,right);gs.appendChild(row);
+ });
+
+ const history=document.getElementById("matchHistory");history.innerHTML="";
+ if(!all.length){history.textContent="まだ対局記録がありません。";return;}
+ all.forEach(m=>{
+  const card=document.createElement("div");card.className="match-card";
+  const title=document.createElement("h3");title.textContent=m.game;
+  const date=document.createElement("div");date.className="match-meta";date.textContent=m.date||"日付不明";
+  card.append(title,date);
+  m.players.forEach(p=>{
+   const line=document.createElement("div");line.className="score-line";
+   const name=document.createElement("span");name.textContent=p.name;
+   if(m.winners.includes(p.name))name.className="winner";
+   const score=document.createElement("strong");score.textContent=p.score+"点";
+   line.append(name,score);card.appendChild(line);
+  });
+  const result=document.createElement("p");result.className="muted";
+  result.textContent="勝者："+(m.winners.join("・")||"なし");card.appendChild(result);
+  const del=document.createElement("button");del.className="danger";del.textContent="この記録を削除";
+  del.addEventListener("click",()=>deleteMatch(m.id));card.appendChild(del);
+  history.appendChild(card);
+ });
+}
+function deleteMatch(id){
+ if(!confirm("この対局記録を削除しますか？"))return;
+ matches=normalizedMatches().filter(m=>m.id!==id);
+ saveMatches();renderHistory();
+}
+function renderHome(){
+ const recent=document.getElementById("recentMatches");recent.innerHTML="";
+ const all=normalizedMatches().slice(0,3);
+ if(!all.length){recent.textContent="まだ対局記録がありません。";return;}
+ all.forEach(m=>{
+  const row=document.createElement("div");row.className="list-row";
+  const left=document.createElement("div");left.className="item-main";
+  const title=document.createElement("strong");title.textContent=m.game;
+  const date=document.createElement("div");date.className="muted";date.textContent=m.date||"日付不明";
+  left.append(title,date);
+  const right=document.createElement("span");right.className="winner";right.textContent=m.winners.join("・")||"勝者なし";
+  row.append(left,right);recent.appendChild(row);
+ });
 }
 
 /* 初期化 */
-function init() {
-  if (!config.games.some(g => g.name === "花札")) {
-    // 花札を自動で再登録はせず、登録済みゲームをそのまま利用します。
-  }
+document.querySelectorAll(".hanaYaku").forEach(input=>input.addEventListener("change",calcHana));
+["kasuCount","tanCount","taneCount"].forEach(id=>document.getElementById(id).addEventListener("input",calcHana));
 
-  document.getElementById("matchDate").value = todayString();
-  resetRecordPlayers();
-  renderGameList();
-  renderSettings();
-  renderHome();
-  calcHana();
+function init(){
+ document.getElementById("matchDate").value=todayString();
+ resetRecordPlayers();
+ renderGameList();
+ renderSettings();
+ renderHome();
+ calcHana();
 }
-
 init();
 </script>
 </body>
