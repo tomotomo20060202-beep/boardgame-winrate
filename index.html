@@ -210,7 +210,7 @@ const MATCH_KEY="boardgame-winrate-v1";
 const CONFIG_KEY="boardgame-winrate-settings-v1";
 
 function defaultConfig(){
- return {games:[{name:"花札",mode:"high",scoreType:"custom"}],people:["自分","相手"]};
+ return {games:[{name:"花札",mode:"high",scoreType:"custom"},{name:"大富豪",mode:"high",scoreType:"manual"}],people:["自分","相手"]};
 }
 function loadConfig(){
  try{
@@ -220,6 +220,7 @@ function loadConfig(){
    if(typeof g==="string")return {name:g,mode:"high",scoreType:g==="花札"?"custom":"manual"};
    return {name:g.name,mode:g.mode==="low"?"low":"high",scoreType:g.scoreType||(g.name==="花札"?"custom":"manual")};
   }).filter(g=>g.name);
+  if(!s.games.some(g=>/大富豪|大貧民/.test(g.name||"")))s.games.push({name:"大富豪",mode:"high",scoreType:"manual"});
   s.people=s.people.map(String);
   return s;
  }catch{return defaultConfig();}
@@ -306,7 +307,7 @@ function syncRecordInputLabels(){
   const labels=row.querySelectorAll("label");
   if(labels[1])labels[1].textContent=rankMode?"順位":"得点";
   const input=document.getElementById("recordScore"+i);
-  if(input){input.min=rankMode?"1":"";input.max=rankMode?String(recordPlayerCount):"";input.placeholder=rankMode?"1〜"+recordPlayerCount:"得点";}
+  if(input){input.min=rankMode?"1":"";input.max=rankMode?String(recordPlayerCount):"";input.placeholder=rankMode?"1〜"+recordPlayerCount:"得点";if(rankMode&&input.value==="0")input.value=String(i+1);}
  }
  const help=document.getElementById("recordHelp");
  if(help)help.textContent=rankMode?"順位を入力してください。1位が大富豪。前回の大富豪が1位以外なら都落ちで大貧民に確定します。":"勝利条件に従って勝者を自動判定します。";
