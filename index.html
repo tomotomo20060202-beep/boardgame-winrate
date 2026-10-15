@@ -3,8 +3,15 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="ボードゲームの対局を記録して、プレイヤーやゲームごとの勝率を確認できます。">
 <meta name="theme-color" content="#f5f7fb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ボドゲ勝率">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>ボドゲ勝率計算</title>
 <style>
 :root{--main:#4f70e8;--light:#edf1ff;--bg:#f5f7fb;--text:#242938;--muted:#737b8e;--border:#e0e4ed}
@@ -624,6 +631,13 @@ function init(){
  calcHana();
 }
 init();
+
+if ("serviceWorker" in navigator) {
+ window.addEventListener("load",()=>{
+  navigator.serviceWorker.register("./service-worker.js",{scope:"./"})
+   .catch(error=>console.error("Service Workerの登録に失敗しました。",error));
+ });
+}
 </script>
 </body>
 </html>
