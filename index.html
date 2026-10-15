@@ -74,6 +74,7 @@ input[type=checkbox]{width:auto}
 </div>
 </header>
 <main>
+<div id="voiceStatus" class="panel muted" aria-live="polite">音声操作：記録画面の「音声で入力」を押して開始できます。</div>
 
 <!-- ホーム -->
 <section id="homePage">
@@ -123,7 +124,7 @@ input[type=checkbox]{width:auto}
 <p id="recordHelp" class="muted">勝利条件に従って勝者を自動判定します。</p>
 <div id="recordPlayers"></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="secondary" onclick="startVoiceInput()">🎙️ 音声で入力</button><button type="button" class="secondary" onclick="stopVoiceInput()">音声入力を停止</button></div>
-<p id="voiceStatus" class="muted" aria-live="polite">音声入力は必要なときだけ開始できます。</p>
+
 </div>
 <button class="primary full" onclick="saveMatch()">対局を保存する</button>
 </div>
@@ -481,8 +482,8 @@ function addGame(){
  saveConfig();input.value="";
  renderSettings();renderGameList();
 }
-function removeGame(name){
- if(!confirm("「"+name+"」を登録ゲームから削除しますか？\n対局履歴は削除されません。"))return;
+function removeGame(name,skipConfirm=false){
+ if(!skipConfirm&&!confirm("「"+name+"」を登録ゲームから削除しますか？\n対局履歴は削除されません。"))return;
  config.games=config.games.filter(g=>g.name!==name);
  saveConfig();renderSettings();renderGameList();
 }
@@ -505,8 +506,8 @@ function addPlayer(){
  if(config.people.includes(name)){alert("そのプレイヤーは登録済みです。");return;}
  config.people.push(name);saveConfig();input.value="";renderSettings();
 }
-function removePlayer(name){
- if(!confirm("「"+name+"」を登録プレイヤーから削除しますか？"))return;
+function removePlayer(name,skipConfirm=false){
+ if(!skipConfirm&&!confirm("「"+name+"」を登録プレイヤーから削除しますか？"))return;
  config.people=config.people.filter(p=>p!==name);
  saveConfig();renderSettings();
 }
@@ -643,8 +644,8 @@ function renderHistory(){
  });
 }
 function rankTitleFor(rank,count){return rank===1?"大富豪":rank===2?"富豪":rank===count-1?"貧民":rank===count?"大貧民":"平民";}
-function deleteMatch(id){
- if(!confirm("この対局記録を削除しますか？"))return;
+function deleteMatch(id,skipConfirm=false){
+ if(!skipConfirm&&!confirm("この対局記録を削除しますか？"))return;
  matches=normalizedMatches().filter(m=>m.id!==id);
  saveMatches();renderHistory();
 }
@@ -677,38 +678,220 @@ function init(){
 }
 init();
 
-/* 音声入力：Web Speech API対応ブラウザで利用 */
+/* 音声操作：一度開始すると音声で停止するまで再接続を試みます */
 let voiceRecognition=null;
-function startVoiceInput(){
- const status=document.getElementById("voiceStatus");
- const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SpeechRecognition){status.textContent="このブラウザは音声認識に対応していません。Chromeなどでお試しください。";return;}
- if(voiceRecognition){try{voiceRecognition.stop();}catch{}}
- voiceRecognition=new SpeechRecognition();voiceRecognition.lang="ja-JP";voiceRecognition.continuous=true;voiceRecognition.interimResults=false;
- voiceRecognition.onstart=()=>status.textContent="聞き取り中です。「ゲーム記録」「プレイヤー追加」「ゲーム 大富豪」「名前 1 佐藤」「順位 1 」「得点 10」「保存」などと話してください。";
- voiceRecognition.onerror=e=>status.textContent="音声認識エラー："+(e.error||"不明");
- voiceRecognition.onend=()=>{if(status.textContent.startsWith("聞き取り中"))status.textContent="音声入力を終了しました。";};
- voiceRecognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)handleVoiceCommand(e.results[i][0].transcript.trim());}};
- try{voiceRecognition.start();}catch(e){status.textContent="音声入力を開始できませんでした。もう一度お試しください。";}
+let voiceEnabled=false;
+let voiceRestartTimer=null;
+let pendingVoiceAction=null;
+function voiceStatus(message){
+ const el=document.getElementById("voiceStatus");
+ if(el)el.textContent=message;
 }
-function stopVoiceInput(){if(voiceRecognition){try{voiceRecognition.stop();}catch{}}document.getElementById("voiceStatus").textContent="音声入力を停止しました。";}
+function startVoiceInput(){
+ const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SpeechRecognition){voiceStatus("このブラウザは音声認識に対応していません。Android版Chromeなどでお試しください。");return;}
+ if(voiceEnabled&&voiceRecognition){voiceStatus("音声操作はすでに有効です。音声で「ヘルプ」と話すと命令一覧を確認できます。");return;}
+ voiceEnabled=true;
+ launchVoiceRecognition(SpeechRecognition);
+}
+function launchVoiceRecognition(SpeechRecognition){
+ if(!voiceEnabled)return;
+ try{
+  voiceRecognition=new SpeechRecognition();
+  voiceRecognition.lang="ja-JP";
+  voiceRecognition.continuous=true;
+  voiceRecognition.interimResults=false;
+  voiceRecognition.onstart=()=>voiceStatus("🎙️ 音声操作中です。「ヘルプ」で命令一覧、「音声停止」で終了できます。");
+  voiceRecognition.onerror=e=>{
+   voiceStatus("音声認識："+(e.error||"エラー")+"。マイク権限と通信状態を確認してください。");
+   if(e.error==="not-allowed"||e.error==="service-not-allowed")voiceEnabled=false;
+  };
+  voiceRecognition.onend=()=>{
+   voiceRecognition=null;
+   if(voiceEnabled){
+    clearTimeout(voiceRestartTimer);
+    voiceRestartTimer=setTimeout(()=>{
+     if(voiceEnabled)launchVoiceRecognition(window.SpeechRecognition||window.webkitSpeechRecognition);
+    },500);
+   }else voiceStatus("音声操作を停止しました。");
+  };
+  voiceRecognition.onresult=e=>{
+   for(let i=e.resultIndex;i<e.results.length;i++){
+    if(e.results[i].isFinal){
+     const command=e.results[i][0].transcript.trim();
+     if(command)handleVoiceCommand(command);
+    }
+   }
+  };
+  voiceRecognition.start();
+ }catch(e){voiceStatus("音声入力を開始できませんでした。もう一度ボタンを押してください。");}
+}
+function stopVoiceInput(){
+ voiceEnabled=false;
+ clearTimeout(voiceRestartTimer);
+ if(voiceRecognition){const r=voiceRecognition;voiceRecognition=null;try{r.onend=null;r.stop();}catch{}}
+ voiceStatus("音声操作を停止しました。");
+}
+function voiceHelp(){
+ voiceStatus("命令例：ホーム／ゲーム記録／履歴／設定／花札計算、ゲーム 大富豪、プレイヤー追加、プレイヤー削除 4、名前 1 自分、順位 1 2、得点 1 10、日付 今日、ゲーム追加 UNO、プレイヤー登録 佐藤、五光 オン、かす 12、計算、反映、保存、直前の記録削除、音声停止。削除や保存などは確認が必要です。");
+}
+function voiceGoPage(id,label){
+ showPage(id);voiceStatus(label+"を開きました。");
+}
+function voiceSetNumber(id,value,label,min=0,max=999){
+ const el=document.getElementById(id);
+ if(!el){voiceStatus(label+"の入力欄が見つかりません。");return false;}
+ const n=Number(value);
+ if(!Number.isFinite(n)||n<min||n>max){voiceStatus(label+"は"+min+"〜"+max+"の範囲で指定してください。");return false;}
+ el.value=String(n);el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));
+ voiceStatus(label+"を"+n+"にしました。");return true;
+}
+function voiceConfirm(action,question){
+ pendingVoiceAction=action;
+ voiceStatus(question+" 「はい」または「いいえ」と話してください。");
+}
 function handleVoiceCommand(command){
- const status=document.getElementById("voiceStatus");
- const text=command.replace(/[。.!！?？]/g,"").trim();
+ const raw=command.trim();
+ const text=raw.replace(/[。.!！?？、，]/g,"").replace(/\s+/g," ").trim();
+ const lower=text.toLowerCase();
  if(!text)return;
- if(text.includes("ゲーム記録")||text.includes("記録画面")){showPage("recordPage");status.textContent="ゲーム記録画面を開きました。";return;}
- if(text.includes("プレイヤー追加")||text.includes("人追加")){addRecordPlayer();status.textContent="プレイヤーを追加しました。";return;}
- if(text.startsWith("ゲーム ")){
-  const name=text.slice(3).trim();const game=config.games.find(g=>g.name===name);
-  if(game){document.getElementById("gameName").value=name;gameChanged();status.textContent=name+"を選択しました。";}else status.textContent="登録済みのゲームが見つかりません："+name;
+ if(/^(ヘルプ|使い方|命令一覧|できること)$/.test(text)){voiceHelp();return;}
+ if(/^(音声停止|音声入力停止|マイク停止|聞き取り停止|ストップ)$/.test(text)){stopVoiceInput();return;}
+ if(pendingVoiceAction){
+  if(/^(はい|実行|確認|そう|削除して|保存して)$/.test(text)){
+   const action=pendingVoiceAction;pendingVoiceAction=null;
+   try{action();}catch(e){voiceStatus("操作に失敗しました："+e.message);}
+   return;
+  }
+  if(/^(いいえ|キャンセル|やめる|中止)$/.test(text)){pendingVoiceAction=null;voiceStatus("操作をキャンセルしました。");return;}
+  voiceStatus("確認待ちです。「はい」か「いいえ」と話してください。");return;
+ }
+ if(/^(ホーム|ホーム画面|最初の画面)$/.test(text)){voiceGoPage("homePage","ホーム");return;}
+ if(/^(記録|ゲーム記録|記録画面|対局記録)$/.test(text)){voiceGoPage("recordPage","ゲーム記録");return;}
+ if(/^(履歴|勝率|履歴画面|勝率画面|成績)$/.test(text)){voiceGoPage("historyPage","履歴・勝率");return;}
+ if(/^(設定|設定画面)$/.test(text)){voiceGoPage("settingsPage","設定");return;}
+ if(/^(花札計算|花札の計算|点数計算画面)$/.test(text)){openHanaPage();voiceStatus("花札の点数計算画面を開きました。");return;}
+ if(/^(戻る|前の画面)$/.test(text)){
+  const visible=[...document.querySelectorAll("main>section")].find(s=>!s.classList.contains("hidden"));
+  if(visible?.id==="hanaPage")voiceGoPage("recordPage","ゲーム記録");
+  else voiceGoPage("homePage","ホーム");
   return;
  }
- const nameMatch=text.match(/^(?:名前|プレイヤー)\s*(\d+)\s*(?:は|を)?\s*(.+)$/);
- if(nameMatch){const idx=Number(nameMatch[1])-1;const target=document.getElementById("recordPlayer"+idx);const name=nameMatch[2].trim();if(target&&Array.from(target.options).some(o=>o.value===name)){target.value=name;renderHanaTarget();status.textContent="プレイヤー"+(idx+1)+"を"+name+"にしました。";}else status.textContent="番号または登録済みプレイヤー名を確認してください。";return;}
- const scoreMatch=text.match(/^(?:順位|得点|点数)\s*(\d+)\s*(?:は|を)?\s*(-?\d+)$/);
- if(scoreMatch){const idx=Number(scoreMatch[1])-1;const input=document.getElementById("recordScore"+idx);if(input){input.value=scoreMatch[2];status.textContent=(isDaifugoGame(document.getElementById("gameName").value)?"順位":"得点")+"を入力しました。";}else status.textContent="その番号のプレイヤーがいません。";return;}
- if(text==="保存"||text==="対局を保存"||text==="保存して"){status.textContent="保存確認を表示します。";if(confirm("入力内容を対局記録として保存しますか？"))saveMatch();return;}
- status.textContent="認識しましたが、対応する命令ではありません："+text;
+ let m=text.match(/^ゲーム(?:を)?\s*(?:選択|変更)?\s+(.+)$/);
+ if(m){
+  const wanted=m[1].trim();
+  const game=config.games.find(g=>g.name===wanted)||config.games.find(g=>g.name.includes(wanted));
+  if(!game){voiceStatus("登録済みゲームが見つかりません："+wanted);return;}
+  showPage("recordPage");document.getElementById("gameName").value=game.name;gameChanged();voiceStatus(game.name+"を選択しました。");return;
+ }
+ if(/^(プレイヤー追加|人追加|参加者追加)$/.test(text)){if(!document.getElementById("recordPage").classList.contains("hidden")){addRecordPlayer();voiceStatus("対局のプレイヤーを追加しました。");}else voiceStatus("ゲーム記録画面を開いてから追加してください。");return;}
+ m=text.match(/^(?:対局の)?プレイヤー削除\s*(\d+)$/);
+ if(m){
+  const idx=Number(m[1])-1;
+  if(idx<0||idx>=recordPlayerCount){voiceStatus("その番号のプレイヤーはいません。");return;}
+  voiceConfirm(()=>{const row=document.getElementById("recordRow"+idx);if(row){row.remove();recordPlayerCount--;reindexRecordPlayers();}voiceStatus("プレイヤーを削除しました。");},"プレイヤー"+(idx+1)+"を削除しますか？");return;
+ }
+ m=text.match(/^(?:名前|プレイヤー)\s*(\d+)\s*(?:は|を|に)?\s*(.+)$/);
+ if(m){
+  const idx=Number(m[1])-1,target=document.getElementById("recordPlayer"+idx),wanted=m[2].trim();
+  if(!target){voiceStatus("その番号のプレイヤーはいません。");return;}
+  const option=[...target.options].find(o=>o.value===wanted)||[...target.options].find(o=>o.value.includes(wanted));
+  if(!option){voiceStatus("登録済みプレイヤーが見つかりません："+wanted+"。先に設定で登録してください。");return;}
+  target.value=option.value;renderHanaTarget();voiceStatus("プレイヤー"+(idx+1)+"を"+option.value+"にしました。");return;
+ }
+ m=text.match(/^(?:順位|得点|点数|スコア)\s*(\d+)\s*(?:は|を|に)?\s*(-?\d+)$/);
+ if(m){
+  const idx=Number(m[1])-1,input=document.getElementById("recordScore"+idx);
+  if(!input){voiceStatus("その番号の入力欄がありません。");return;}
+  input.value=m[2];voiceStatus((isDaifugoGame(document.getElementById("gameName").value)?"順位":"得点")+"をプレイヤー"+m[1]+"に"+m[2]+"で入力しました。");return;
+ }
+ m=text.match(/^(?:日付|対局日)\s*(?:を)?\s*(今日|きょう|昨日|きのう|\d{4}年?\s*\d{1,2}月?\s*\d{1,2}日?)$/);
+ if(m){
+  let date;
+  if(/今日|きょう/.test(m[1]))date=todayString();
+  else if(/昨日|きのう/.test(m[1])){const d=new Date();d.setDate(d.getDate()-1);date=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+  else {const nums=m[1].match(/\d+/g);date=nums[0]+"-"+String(nums[1]).padStart(2,"0")+"-"+String(nums[2]).padStart(2,"0");}
+  document.getElementById("matchDate").value=date;voiceStatus("対局日を"+date+"にしました。");return;
+ }
+ if(/^(ゲーム追加|ゲームを追加|ゲーム登録)\s+/.test(text)){
+  const name=text.replace(/^(ゲーム追加|ゲームを追加|ゲーム登録)\s+/,"").trim();
+  document.getElementById("newGameName").value=name;
+  if(!name){voiceStatus("追加するゲーム名を話してください。");return;}
+  if(config.games.some(g=>g.name===name)){voiceStatus(name+"は登録済みです。");return;}
+  addGame();voiceStatus(name+"を登録しました。");return;
+ }
+ if(/^(プレイヤー登録|名前登録|プレイヤー名登録)\s+/.test(text)){
+  const name=text.replace(/^(プレイヤー登録|名前登録|プレイヤー名登録)\s+/,"").trim();
+  if(!name){voiceStatus("登録するプレイヤー名を話してください。");return;}
+  document.getElementById("newPlayerName").value=name;
+  if(config.people.includes(name)){voiceStatus(name+"は登録済みです。");return;}
+  addPlayer();voiceStatus(name+"を登録しました。");return;
+ }
+ m=text.match(/^(?:ゲーム削除|ゲームを削除)\s+(.+)$/);
+ if(m){
+  const g=config.games.find(x=>x.name===m[1])||config.games.find(x=>x.name.includes(m[1]));
+  if(!g){voiceStatus("登録済みゲームが見つかりません："+m[1]);return;}
+  voiceConfirm(()=>removeGame(g.name,true),"ゲーム「"+g.name+"」を削除しますか？");return;
+ }
+ m=text.match(/^(?:プレイヤー登録削除|登録プレイヤー削除|名前削除)\s+(.+)$/);
+ if(m){
+  const name=config.people.find(x=>x===m[1])||config.people.find(x=>x.includes(m[1]));
+  if(!name){voiceStatus("登録済みプレイヤーが見つかりません："+m[1]);return;}
+  voiceConfirm(()=>removePlayer(name,true),"登録プレイヤー「"+name+"」を削除しますか？");return;
+ }
+ m=text.match(/^(高得点|低得点|勝利条件)\s*(?:を)?\s*(高得点|低得点|高い方|低い方)?$/);
+ if(m){
+  const g=getGame(document.getElementById("gameName").value);
+  if(!g){voiceStatus("先にゲームを選択してください。");return;}
+  g.mode=(/低/.test(text))?"low":"high";saveConfig();voiceStatus("勝利条件を"+(g.mode==="low"?"低得点が勝ち":"高得点が勝ち")+"にしました。");return;
+ }
+ m=text.match(/^(?:手入力|専用計算|点数方式)\s*(?:を)?\s*(手入力|専用計算)?$/);
+ if(m){
+  const g=getGame(document.getElementById("gameName").value);
+  if(!g){voiceStatus("先にゲームを選択してください。");return;}
+  const type=/専用/.test(text)?"custom":"manual";
+  if(type==="custom"&&g.name!=="花札"){voiceStatus("専用計算に対応しているのは花札のみです。");return;}
+  g.scoreType=type;saveConfig();renderGameList();voiceStatus("得点方式を"+(type==="custom"?"専用計算":"手入力")+"にしました。");return;
+ }
+ m=text.match(/^(五光|四光|雨四光|三光|猪鹿蝶|赤短|青短)\s*(オン|選択|チェック|オフ|解除|外す)?$/);
+ if(m){
+  const map={"五光":0,"四光":1,"雨四光":2,"三光":3,"猪鹿蝶":4,"赤短":5,"青短":6};
+  const el=document.querySelectorAll(".hanaYaku")[map[m[1]]];
+  if(!el){voiceStatus("花札の計算画面を開いてください。");return;}
+  el.checked=!/オフ|解除|外す/.test(m[2]||"");calcHana();voiceStatus(m[1]+"を"+(el.checked?"選択":"解除")+"しました。");return;
+ }
+ m=text.match(/^(かす|たん|たね)\s*(?:を)?\s*(\d+)$/);
+ if(m){
+  const id={かす:"kasuCount",たん:"tanCount",たね:"taneCount"}[m[1]];
+  if(!voiceSetNumber(id,m[2],m[1],0,48))return;
+  calcHana();return;
+ }
+ if(/^(計算|点数計算|再計算)$/.test(text)){const n=calcHana();voiceStatus("花札の計算結果は"+n+"点です。");return;}
+ if(/^(反映|得点に反映|計算結果を反映)$/.test(text)){applyHanaScore();voiceStatus("計算結果を反映しました。");return;}
+ if(/^(保存|対局保存|対局を保存|保存して)$/.test(text)){
+  voiceConfirm(()=>saveMatch(),"この対局を保存しますか？");return;
+ }
+ if(/^(直前の記録削除|最新の記録削除|最後の記録削除)$/.test(text)){
+  const all=normalizedMatches();if(!all.length){voiceStatus("削除する対局記録がありません。");return;}
+  const id=all[0].id;voiceConfirm(()=>deleteMatch(id,true),"最新の対局記録（"+all[0].game+"）を削除しますか？");return;
+ }
+ m=text.match(/^(?:記録削除|対局削除)\s*(\d+)$/);
+ if(m){
+  const all=normalizedMatches(),idx=Number(m[1])-1;
+  if(idx<0||idx>=all.length){voiceStatus("その番号の履歴はありません。");return;}
+  voiceConfirm(()=>deleteMatch(all[idx].id,true),"履歴の"+m[1]+"番目（"+all[idx].game+"）を削除しますか？");return;
+ }
+ voiceStatus("認識しましたが命令に一致しません："+text+"。音声で「ヘルプ」と話してください。");
+}
+function reindexRecordPlayers(){
+ const rows=[...document.querySelectorAll("#recordPlayers .player-row")];
+ rows.forEach((row,i)=>{
+  row.id="recordRow"+i;
+  const select=row.querySelector("select");select.id="recordPlayer"+i;
+  const labels=row.querySelectorAll("label");labels[0].htmlFor=select.id;labels[0].textContent="プレイヤー"+(i+1);
+  const input=row.querySelector("input");input.id="recordScore"+i;labels[1].htmlFor=input.id;
+ });
+ recordPlayerCount=rows.length;syncRecordInputLabels();renderHanaTarget();
 }
 
 if ("serviceWorker" in navigator) {
