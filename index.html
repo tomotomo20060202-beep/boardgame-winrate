@@ -758,7 +758,7 @@ function voiceConfirm(action,question){
  pendingVoiceAction=action;
  voiceStatus(question+" 「はい」または「いいえ」と話してください。");
 }
-function escapeVoiceRegex(value){return value.replace(/[.*+?^$()|[\]\\]/g,"\\function handleVoiceCommand(command){");}
+function escapeVoiceRegex(value){return value.split("").map(ch=>"^$.*+?()[]{}|\\\\ ".includes(ch)?"\\\\"+ch:ch).join("");}
 function tryVoiceQuickRecord(text){
  if(!/(記録|保存|対局)/.test(text))return false;
  const game=config.games.slice().sort((a,b)=>b.name.length-a.name.length).find(g=>text.includes(g.name));
