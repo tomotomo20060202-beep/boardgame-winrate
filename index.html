@@ -79,6 +79,14 @@ input[type=checkbox]{width:auto}
 <!-- ホーム -->
 <section id="homePage">
 <h2>ホーム</h2>
+<div class="panel">
+<h3>🎙️ 話すだけで対局を記録</h3>
+<p class="muted">最初にマイクを開始したら、画面を移動せずに話しかけるだけで操作できます。例：「ゲーム記録」「花札」「名前 1 自分」「得点 1 10」「保存」。登録済みの名前と点数をまとめて話して保存することもできます。</p>
+<div class="actions">
+<button class="primary" type="button" onclick="startVoiceInput()">🎙️ 音声操作を開始</button>
+<button class="secondary" type="button" onclick="stopVoiceInput()">音声停止</button>
+</div>
+</div>
 <div class="menu-grid">
 <button class="menu-button" onclick="showPage('recordPage')">🎮 ゲーム記録<small>ゲームを選んで対局を記録</small></button>
 <button class="menu-button" onclick="showPage('historyPage')">📊 履歴・勝率<small>対局結果を振り返る</small></button>
@@ -733,7 +741,7 @@ function stopVoiceInput(){
  voiceStatus("音声操作を停止しました。");
 }
 function voiceHelp(){
- voiceStatus("命令例：ホーム／ゲーム記録／履歴／設定／花札計算、ゲーム 大富豪、プレイヤー追加、プレイヤー削除 4、名前 1 自分、順位 1 2、得点 1 10、日付 今日、ゲーム追加 UNO、プレイヤー登録 佐藤、五光 オン、かす 12、計算、反映、保存、直前の記録削除、音声停止。削除や保存などは確認が必要です。");
+ voiceStatus("命令例：ホーム／ゲーム記録／履歴／設定、記録開始、ゲーム 花札、名前 1 自分、得点 1 10、保存。まとめて「花札、自分10点、相手5点で保存」と話すこともできます。大富豪は「大富豪、自分1位、相手2位、佐藤3位、田中4位で保存」。ゲーム追加 UNO、プレイヤー登録 佐藤、五光 オン、かす 12、計算、直前の記録削除、音声停止。保存や削除は確認が必要です。");
 }
 function voiceGoPage(id,label){
  showPage(id);voiceStatus(label+"を開きました。");
@@ -750,6 +758,52 @@ function voiceConfirm(action,question){
  pendingVoiceAction=action;
  voiceStatus(question+" 「はい」または「いいえ」と話してください。");
 }
+function escapeVoiceRegex(value){return value.replace(/[.*+?^$()|[\]\\]/g,"\\function handleVoiceCommand(command){");}
+function tryVoiceQuickRecord(text){
+ if(!/(記録|保存|対局)/.test(text))return false;
+ const game=config.games.slice().sort((a,b)=>b.name.length-a.name.length).find(g=>text.includes(g.name));
+ if(!game)return false;
+ const entries=[];
+ const names=config.people.slice().sort((a,b)=>b.length-a.length);
+ names.forEach(name=>{
+  if(!name)return;
+  const re=new RegExp(escapeVoiceRegex(name)+"\\s*(?:は|が|を|の)?\\s*(-?\\d+)\\s*(?:点|位|順位)?");
+  const match=text.match(re);
+  if(match&&!entries.some(p=>p.name===name))entries.push({name,score:Number(match[1])});
+ });
+ if(entries.length<2){voiceStatus("記録するプレイヤーと点数を話してください。例：「花札、自分10点、相手5点で保存」。名前が未登録なら「プレイヤー登録 名前」と話してください。");return true;}
+ if(isDaifugoGame(game.name)){
+  if(entries.length<4){voiceStatus("大富豪は4人以上必要です。参加者を登録して、各プレイヤーの順位を話してください。");return true;}
+  const ranks=entries.map(p=>p.score);
+  if(ranks.some(n=>!Number.isInteger(n)||n<1||n>entries.length)||new Set(ranks).size!==entries.length){voiceStatus("大富豪の順位は1位から人数分まで、重複なしで指定してください。");return true;}
+ }else if(entries.some(p=>!Number.isFinite(p.score))){
+  voiceStatus("点数を読み取れませんでした。もう一度話してください。");return true;
+ }
+ const question=game.name+"の記録です："+entries.map(p=>p.name+" "+p.score+(isDaifugoGame(game.name)?"位":"点")).join("、")+"。保存しますか？";
+ voiceConfirm(()=>{
+  const players=entries.map(p=>({...p}));
+  let winners=[],rankInfo=null;
+  if(isDaifugoGame(game.name)){
+   const previous=normalizedMatches().find(m=>m.game===game.name);
+   const previousTop=previous?(previous.players.find(p=>Number(p.score)===1)||{}).name:null;
+   const currentTop=players.find(p=>p.score===1).name;
+   const forcedDaifugo=previousTop&&previousTop!==currentTop&&players.some(p=>p.name===previousTop)?previousTop:null;
+   players.forEach(p=>p.rankTitle=rankTitleFor(p.score,players.length));
+   if(forcedDaifugo){
+    const former=players.find(p=>p.name===forcedDaifugo),last=players.find(p=>p.score===players.length);
+    former.rankTitle="大貧民";former.toochi=true;
+    if(last&&last.name!==former.name)last.rankTitle="貧民";
+   }
+   winners=[currentTop];rankInfo={forcedDaifugo};
+  }else{
+   const best=game.mode==="low"?Math.min(...players.map(p=>p.score)):Math.max(...players.map(p=>p.score));
+   winners=players.filter(p=>p.score===best).map(p=>p.name);
+  }
+  matches.unshift({id:Date.now().toString()+Math.random().toString(16).slice(2),date:todayString(),game:game.name,players,winners,...(rankInfo?{rankInfo}:{})});
+  saveMatches();renderHome();voiceStatus(game.name+"の対局記録を保存しました。");
+ },question);
+ return true;
+}
 function handleVoiceCommand(command){
  const raw=command.trim();
  const text=raw.replace(/[。.!！?？、，]/g,"").replace(/\s+/g," ").trim();
@@ -765,6 +819,17 @@ function handleVoiceCommand(command){
   }
   if(/^(いいえ|キャンセル|やめる|中止)$/.test(text)){pendingVoiceAction=null;voiceStatus("操作をキャンセルしました。");return;}
   voiceStatus("確認待ちです。「はい」か「いいえ」と話してください。");return;
+ }
+ if(tryVoiceQuickRecord(text))return;
+ if(/^(音声で記録|記録開始|対局記録開始|ゲームを記録)$/.test(text)){
+  voiceGoPage("recordPage","ゲーム記録");
+  voiceStatus("記録を開始しました。ゲーム名を話してください。例：「ゲーム 花札」。次に「名前 1 自分」「得点 1 10」、最後に「保存」と話します。");
+  return;
+ }
+ const directGame=config.games.find(g=>g.name===text);
+ if(directGame){
+  showPage("recordPage");document.getElementById("gameName").value=directGame.name;gameChanged();
+  voiceStatus(directGame.name+"を選択しました。プレイヤー名と得点を話してください。");return;
  }
  if(/^(ホーム|ホーム画面|最初の画面)$/.test(text)){voiceGoPage("homePage","ホーム");return;}
  if(/^(記録|ゲーム記録|記録画面|対局記録)$/.test(text)){voiceGoPage("recordPage","ゲーム記録");return;}
