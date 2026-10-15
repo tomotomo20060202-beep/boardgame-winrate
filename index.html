@@ -860,6 +860,28 @@ function handleVoiceCommand(command){
   if(!el){voiceStatus("花札の計算画面を開いてください。");return;}
   el.checked=!/オフ|解除|外す/.test(m[2]||"");calcHana();voiceStatus(m[1]+"を"+(el.checked?"選択":"解除")+"しました。");return;
  }
+ m=text.match(/^(?:花札対象|得点対象|対象プレイヤー)\s*(\d+)$/);
+ if(m){
+  const target=document.getElementById("hanaTarget"),idx=Number(m[1])-1;
+  if(idx<0||idx>=target.options.length){voiceStatus("対象プレイヤーの番号を確認してください。");return;}
+  target.value=String(idx);voiceStatus("花札の得点対象を"+(idx+1)+"番目のプレイヤーにしました。");return;
+ }
+ if(/^(役全解除|役を全解除|すべての役を解除|全部解除)$/.test(text)){
+  document.querySelectorAll(".hanaYaku").forEach(el=>el.checked=false);calcHana();voiceStatus("花札の役選択をすべて解除しました。");return;
+ }
+ if(/^(入力クリア|得点入力クリア|順位入力クリア)$/.test(text)){
+  for(let i=0;i<recordPlayerCount;i++){
+   const input=document.getElementById("recordScore"+i);
+   if(input)input.value=isDaifugoGame(document.getElementById("gameName").value)?String(i+1):"0";
+  }
+  voiceStatus("得点・順位の入力を初期化しました。");return;
+ }
+ if(/^(プレイヤー名|登録名|名前一覧)$/.test(text)){
+  voiceStatus("登録済みプレイヤー："+(config.people.join("、")||"なし"));return;
+ }
+ if(/^(ゲーム一覧|登録ゲーム一覧)$/.test(text)){
+  voiceStatus("登録済みゲーム："+(config.games.map(g=>g.name).join("、")||"なし"));return;
+ }
  m=text.match(/^(かす|たん|たね)\s*(?:を)?\s*(\d+)$/);
  if(m){
   const id={かす:"kasuCount",たん:"tanCount",たね:"taneCount"}[m[1]];
