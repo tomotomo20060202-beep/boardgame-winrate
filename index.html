@@ -758,7 +758,6 @@ function voiceConfirm(action,question){
  pendingVoiceAction=action;
  voiceStatus(question+" 「はい」または「いいえ」と話してください。");
 }
-function escapeVoiceRegex(value){return value.split("").map(ch=>"^$.*+?()[]{}|\\\\ ".includes(ch)?"\\\\"+ch:ch).join("");}
 function tryVoiceQuickRecord(text){
  if(!/(記録|保存|対局)/.test(text))return false;
  const game=config.games.slice().sort((a,b)=>b.name.length-a.name.length).find(g=>text.includes(g.name));
@@ -767,7 +766,7 @@ function tryVoiceQuickRecord(text){
  const names=config.people.slice().sort((a,b)=>b.length-a.length);
  names.forEach(name=>{
   if(!name)return;
-  const re=new RegExp(escapeVoiceRegex(name)+"\\s*(?:は|が|を|の)?\\s*(-?\\d+)\\s*(?:点|位|順位)?");
+  const re=new RegExp(name+"\\s*(?:は|が|を|の)?\\s*(-?\\d+)\\s*(?:点|位|順位)?");
   const match=text.match(re);
   if(match&&!entries.some(p=>p.name===name))entries.push({name,score:Number(match[1])});
  });
