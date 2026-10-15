@@ -120,8 +120,10 @@ input[type=checkbox]{width:auto}
 <h3>③ プレイヤーと得点</h3>
 <button type="button" class="small-button" onclick="addRecordPlayer()">＋追加</button>
 </div>
-<p class="muted">勝利条件に従って勝者を自動判定します。</p>
+<p id="recordHelp" class="muted">勝利条件に従って勝者を自動判定します。</p>
 <div id="recordPlayers"></div>
+<div class="actions" style="margin-top:10px"><button type="button" class="secondary" onclick="startVoiceInput()">🎙️ 音声で入力</button><button type="button" class="secondary" onclick="stopVoiceInput()">音声入力を停止</button></div>
+<p id="voiceStatus" class="muted" aria-live="polite">音声入力は必要なときだけ開始できます。</p>
 </div>
 <button class="primary full" onclick="saveMatch()">対局を保存する</button>
 </div>
@@ -234,6 +236,7 @@ let hanaReturnPage="recordPage";
 function saveConfig(){localStorage.setItem(CONFIG_KEY,JSON.stringify(config));}
 function saveMatches(){localStorage.setItem(MATCH_KEY,JSON.stringify(matches));}
 function getGame(name){return config.games.find(g=>g.name===name);}
+function isDaifugoGame(name){return /大富豪|大貧民/.test(name||"");}
 function todayString(){
  const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
@@ -285,6 +288,7 @@ function renderGameList(){
  document.getElementById("noGamesMessage").classList.toggle("hidden",config.games.length>0);
  document.getElementById("recordForm").classList.toggle("hidden",!select.value);
  updateRecordGame();
+ syncRecordInputLabels();
 }
 
 function gameChanged(){
@@ -293,6 +297,19 @@ function gameChanged(){
   button.classList.toggle("selected",button.textContent===select.value);
  });
  updateRecordGame();
+ syncRecordInputLabels();
+}
+function syncRecordInputLabels(){
+ const rankMode=isDaifugoGame(document.getElementById("gameName").value);
+ for(let i=0;i<recordPlayerCount;i++){
+  const row=document.getElementById("recordRow"+i);if(!row)continue;
+  const labels=row.querySelectorAll("label");
+  if(labels[1])labels[1].textContent=rankMode?"順位":"得点";
+  const input=document.getElementById("recordScore"+i);
+  if(input){input.min=rankMode?"1":"";input.max=rankMode?String(recordPlayerCount):"";input.placeholder=rankMode?"1〜"+recordPlayerCount:"得点";}
+ }
+ const help=document.getElementById("recordHelp");
+ if(help)help.textContent=rankMode?"順位を入力してください。1位が大富豪。前回の大富豪が1位以外なら都落ちで大貧民に確定します。":"勝利条件に従って勝者を自動判定します。";
 }
 
 function updateRecordGame(){
@@ -310,7 +327,7 @@ function updateRecordGame(){
 
 /* プレイヤーと得点 */
 function addRecordPlayer(){
- if(recordPlayerCount>=4){alert("プレイヤーは最大4人までです。");return;}
+ if(recordPlayerCount>=8){alert("プレイヤーは最大8人までです。");return;}
  const i=recordPlayerCount++;
  const row=document.createElement("div");
  row.className="player-row";
@@ -333,18 +350,20 @@ function addRecordPlayer(){
 
  const sw=document.createElement("div");
  const sl=document.createElement("label");
- sl.htmlFor="recordScore"+i;sl.textContent="得点";
+ sl.htmlFor="recordScore"+i;sl.textContent=isDaifugoGame(document.getElementById("gameName").value)?"順位":"得点";
  const score=document.createElement("input");
- score.type="number";score.id="recordScore"+i;score.value="0";score.step="1";
+ score.type="number";score.id="recordScore"+i;score.value=isDaifugoGame(document.getElementById("gameName").value)?String(i+1):"0";score.step="1";if(isDaifugoGame(document.getElementById("gameName").value)){score.min="1";score.max=String(recordPlayerCount);score.placeholder="1〜"+recordPlayerCount;}
  sw.append(sl,score);
  row.append(nw,sw);
  document.getElementById("recordPlayers").appendChild(row);
  renderHanaTarget();
+ syncRecordInputLabels();
 }
 function resetRecordPlayers(){
  recordPlayerCount=0;
  document.getElementById("recordPlayers").innerHTML="";
  addRecordPlayer();addRecordPlayer();
+ syncRecordInputLabels();
 }
 function renderHanaTarget(){
  const target=document.getElementById("hanaTarget");
@@ -415,12 +434,34 @@ function saveMatch(){
   players.push({name,score});
  }
  if(players.length<2){alert("2人以上のプレイヤーを設定してください。");return;}
- const best=game.mode==="low"?Math.min(...players.map(p=>p.score)):Math.max(...players.map(p=>p.score));
- const winners=players.filter(p=>p.score===best).map(p=>p.name);
+ let winners=[];
+ let rankInfo=null;
+ if(isDaifugoGame(gameName)){
+  if(players.length<4){alert("大富豪は4人以上で記録してください。");return;}
+  const ranks=players.map(p=>p.score);
+  if(ranks.some(r=>!Number.isInteger(r)||r<1||r>players.length)||new Set(ranks).size!==players.length){alert("順位は1位から人数分まで、重複しないように入力してください。");return;}
+  const previous=normalizedMatches().find(m=>m.game===gameName);
+  const previousTop=previous?(previous.players.find(p=>Number(p.score)===1)||{}).name:null;
+  const currentTop=players.find(p=>p.score===1).name;
+  const forcedDaifugo=previousTop&&previousTop!==currentTop&&players.some(p=>p.name===previousTop)?previousTop:null;
+  const n=players.length;
+  players.forEach(p=>{p.rankTitle=rankTitleFor(p.score,n);});
+  if(forcedDaifugo){
+   const former=players.find(p=>p.name===forcedDaifugo);
+   const last=players.find(p=>p.score===n);
+   former.rankTitle="大貧民";former.toochi=true;
+   if(last&&last.name!==former.name)last.rankTitle="貧民";
+  }
+  winners=[currentTop];
+  rankInfo={forcedDaifugo};
+ }else{
+  const best=game.mode==="low"?Math.min(...players.map(p=>p.score)):Math.max(...players.map(p=>p.score));
+  winners=players.filter(p=>p.score===best).map(p=>p.name);
+ }
  matches.unshift({
   id:Date.now().toString()+Math.random().toString(16).slice(2),
   date:document.getElementById("matchDate").value||todayString(),
-  game:gameName,players,winners
+  game:gameName,players,winners,...(rankInfo?{rankInfo}: {})
  });
  saveMatches();
  alert("対局を保存しました！");
@@ -522,7 +563,9 @@ function normalizeMatch(m){
  }
  const players=raw.map((p,i)=>typeof p==="string"?{name:p,score:0}:{
   name:p.name||p.player||p.playerName||("プレイヤー"+(i+1)),
-  score:Number(p.score??p.points??0)
+  score:Number(p.score??p.points??0),
+  ...(p.rankTitle?{rankTitle:p.rankTitle}:{}),
+  ...(p.toochi?{toochi:true}:{})
  });
  let winners=Array.isArray(m.winners)?m.winners:[];
  if(!winners.length&&players.length){
@@ -588,7 +631,7 @@ function renderHistory(){
    const line=document.createElement("div");line.className="score-line";
    const name=document.createElement("span");name.textContent=p.name;
    if(m.winners.includes(p.name))name.className="winner";
-   const score=document.createElement("strong");score.textContent=p.score+"点";
+   const score=document.createElement("strong");score.textContent=isDaifugoGame(m.game)?(p.rankTitle||rankTitleFor(p.score,m.players.length))+(p.toochi?"（都落ち）":""):(p.score+"点");
    line.append(name,score);card.appendChild(line);
   });
   const result=document.createElement("p");result.className="muted";
@@ -598,6 +641,7 @@ function renderHistory(){
   history.appendChild(card);
  });
 }
+function rankTitleFor(rank,count){return rank===1?"大富豪":rank===2?"富豪":rank===count-1?"貧民":rank===count?"大貧民":"平民";}
 function deleteMatch(id){
  if(!confirm("この対局記録を削除しますか？"))return;
  matches=normalizedMatches().filter(m=>m.id!==id);
@@ -631,6 +675,40 @@ function init(){
  calcHana();
 }
 init();
+
+/* 音声入力：Web Speech API対応ブラウザで利用 */
+let voiceRecognition=null;
+function startVoiceInput(){
+ const status=document.getElementById("voiceStatus");
+ const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SpeechRecognition){status.textContent="このブラウザは音声認識に対応していません。Chromeなどでお試しください。";return;}
+ if(voiceRecognition){try{voiceRecognition.stop();}catch{}}
+ voiceRecognition=new SpeechRecognition();voiceRecognition.lang="ja-JP";voiceRecognition.continuous=true;voiceRecognition.interimResults=false;
+ voiceRecognition.onstart=()=>status.textContent="聞き取り中です。「ゲーム記録」「プレイヤー追加」「ゲーム 大富豪」「名前 1 佐藤」「順位 1 」「得点 10」「保存」などと話してください。";
+ voiceRecognition.onerror=e=>status.textContent="音声認識エラー："+(e.error||"不明");
+ voiceRecognition.onend=()=>{if(status.textContent.startsWith("聞き取り中"))status.textContent="音声入力を終了しました。";};
+ voiceRecognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)handleVoiceCommand(e.results[i][0].transcript.trim());}};
+ try{voiceRecognition.start();}catch(e){status.textContent="音声入力を開始できませんでした。もう一度お試しください。";}
+}
+function stopVoiceInput(){if(voiceRecognition){try{voiceRecognition.stop();}catch{}}document.getElementById("voiceStatus").textContent="音声入力を停止しました。";}
+function handleVoiceCommand(command){
+ const status=document.getElementById("voiceStatus");
+ const text=command.replace(/[。.!！?？]/g,"").trim();
+ if(!text)return;
+ if(text.includes("ゲーム記録")||text.includes("記録画面")){showPage("recordPage");status.textContent="ゲーム記録画面を開きました。";return;}
+ if(text.includes("プレイヤー追加")||text.includes("人追加")){addRecordPlayer();status.textContent="プレイヤーを追加しました。";return;}
+ if(text.startsWith("ゲーム ")){
+  const name=text.slice(3).trim();const game=config.games.find(g=>g.name===name);
+  if(game){document.getElementById("gameName").value=name;gameChanged();status.textContent=name+"を選択しました。";}else status.textContent="登録済みのゲームが見つかりません："+name;
+  return;
+ }
+ const nameMatch=text.match(/^(?:名前|プレイヤー)\s*(\d+)\s*(?:は|を)?\s*(.+)$/);
+ if(nameMatch){const idx=Number(nameMatch[1])-1;const target=document.getElementById("recordPlayer"+idx);const name=nameMatch[2].trim();if(target&&Array.from(target.options).some(o=>o.value===name)){target.value=name;renderHanaTarget();status.textContent="プレイヤー"+(idx+1)+"を"+name+"にしました。";}else status.textContent="番号または登録済みプレイヤー名を確認してください。";return;}
+ const scoreMatch=text.match(/^(?:順位|得点|点数)\s*(\d+)\s*(?:は|を)?\s*(-?\d+)$/);
+ if(scoreMatch){const idx=Number(scoreMatch[1])-1;const input=document.getElementById("recordScore"+idx);if(input){input.value=scoreMatch[2];status.textContent=(isDaifugoGame(document.getElementById("gameName").value)?"順位":"得点")+"を入力しました。";}else status.textContent="その番号のプレイヤーがいません。";return;}
+ if(text==="保存"||text==="対局を保存"||text==="保存して"){status.textContent="保存確認を表示します。";if(confirm("入力内容を対局記録として保存しますか？"))saveMatch();return;}
+ status.textContent="認識しましたが、対応する命令ではありません："+text;
+}
 
 if ("serviceWorker" in navigator) {
  window.addEventListener("load",()=>{
