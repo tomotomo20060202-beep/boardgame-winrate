@@ -364,16 +364,23 @@ function addRecordPlayer(){
  const nl=document.createElement("label");
  nl.htmlFor="recordPlayer"+i;
  nl.textContent="プレイヤー"+(i+1);
- const ns=document.createElement("select");
+ const ns=document.createElement("input");
+ ns.type="text";
  ns.id="recordPlayer"+i;
- const blank=document.createElement("option");
- blank.value="";blank.textContent="名前を選択";ns.appendChild(blank);
- config.people.forEach(name=>{
-  const o=document.createElement("option");o.value=name;o.textContent=name;ns.appendChild(o);
- });
+ ns.placeholder="名前を入力";
+ ns.setAttribute("list","recordPlayerSuggestions");
+ ns.autocomplete="off";
  if(config.people[i])ns.value=config.people[i];
- ns.addEventListener("change",renderHanaTarget);
+ ns.addEventListener("input",renderHanaTarget);
  nw.append(nl,ns);
+ if(!document.getElementById("recordPlayerSuggestions")){
+  const suggestions=document.createElement("datalist");
+  suggestions.id="recordPlayerSuggestions";
+  config.people.forEach(name=>{
+   const o=document.createElement("option");o.value=name;suggestions.appendChild(o);
+  });
+  document.body.appendChild(suggestions);
+ }
 
  const sw=document.createElement("div");
  const sl=document.createElement("label");
@@ -886,9 +893,7 @@ function handleVoiceCommand(command){
  if(m){
   const idx=Number(m[1])-1,target=document.getElementById("recordPlayer"+idx),wanted=m[2].trim();
   if(!target){voiceStatus("その番号のプレイヤーはいません。");return;}
-  const option=[...target.options].find(o=>o.value===wanted)||[...target.options].find(o=>o.value.includes(wanted));
-  if(!option){voiceStatus("登録済みプレイヤーが見つかりません："+wanted+"。先に設定で登録してください。");return;}
-  target.value=option.value;renderHanaTarget();voiceStatus("プレイヤー"+(idx+1)+"を"+option.value+"にしました。");return;
+  target.value=wanted;renderHanaTarget();voiceStatus("プレイヤー"+(idx+1)+"を"+wanted+"にしました。");return;
  }
  m=text.match(/^(?:順位|得点|点数|スコア)\s*(\d+)\s*(?:は|を|に)?\s*(-?\d+)$/);
  if(m){
