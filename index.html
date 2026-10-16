@@ -62,6 +62,18 @@ input[type=checkbox]{width:auto}
 .yaku-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .yaku-option{display:flex;gap:8px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:9px;font-size:13px;margin:0}
 .yaku-option input{flex:0 0 auto}
+.voice-chat{display:flex;flex-direction:column;gap:10px;margin:0 0 16px}
+.voice-bubble{max-width:88%;padding:13px 16px;border:1px solid var(--border);border-radius:18px;background:white;font-size:14px;line-height:1.55;overflow-wrap:anywhere;box-shadow:0 2px 8px rgba(30,45,80,.04)}
+.voice-user{align-self:flex-end;border-bottom-right-radius:5px;background:#edf1ff;border-color:#dce4ff}
+.voice-assistant{align-self:flex-start;border-bottom-left-radius:5px}
+.voice-dock{position:fixed;z-index:1000;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:12px max(14px,calc((100vw - 760px)/2 + 14px));background:rgba(255,255,255,.96);border-top:1px solid var(--border);box-shadow:0 -5px 22px rgba(30,45,80,.08);backdrop-filter:blur(12px)}
+.voice-mic{flex:0 0 58px;width:58px;height:58px;border:0;border-radius:50%;background:var(--main);color:white;font-size:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(79,112,232,.28)}
+.voice-mic.active{background:#d94b58;animation:micPulse 1.5s infinite}
+.voice-input-bar{min-width:0;flex:1;height:58px;border:1px solid var(--border);border-radius:16px;padding:9px 14px;display:flex;flex-direction:column;justify-content:center;gap:3px;background:#fff}
+.voice-input-bar strong{font-size:13px}.voice-input-bar span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.voice-stop{border:0;background:#edf0f6;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700}
+body{padding-bottom:100px}
+@keyframes micPulse{50%{box-shadow:0 0 0 8px rgba(217,75,88,.15)}}
 .notice{background:#fff8e6;border:1px solid #f0dfaa;border-radius:10px;padding:11px;font-size:13px}
 @media(max-width:420px){.menu-grid,.game-list,.stats-grid{grid-template-columns:1fr 1fr}.player-row{grid-template-columns:minmax(0,1fr) 86px}.panel,.game-card,.match-card{padding:13px}}
 </style>
@@ -74,18 +86,22 @@ input[type=checkbox]{width:auto}
 </div>
 </header>
 <main>
-<div id="voiceStatus" class="panel muted" aria-live="polite">音声操作：記録画面の「音声で入力」を押して開始できます。</div>
+<div id="voiceChat" class="voice-chat" aria-live="polite">
+ <div id="voiceTranscript" class="voice-bubble voice-user">ここに話した内容が表示されます。</div>
+ <div id="voiceStatus" class="voice-bubble voice-assistant">マイクを押して話してください。ゲーム名・プレイヤー名・点数を伝えると記録できます。</div>
+</div>
+<div class="voice-dock">
+ <button id="voiceMicButton" class="voice-mic" type="button" aria-label="音声操作を開始" onclick="toggleVoiceInput()"><span id="voiceMicIcon">🎙</span></button>
+ <div class="voice-input-bar"><strong id="voiceDockTitle">音声アシスタント</strong><span id="voiceDockHint">マイクを押して話しかける</span></div>
+ <button class="voice-stop" type="button" onclick="stopVoiceInput()">停止</button>
+</div>
 
 <!-- ホーム -->
 <section id="homePage">
 <h2>ホーム</h2>
-<div class="panel">
-<h3>🎙️ 話すだけで対局を記録</h3>
-<p class="muted">最初にマイクを開始したら、画面を移動せずに話しかけるだけで操作できます。例：「ゲーム記録」「花札」「名前 1 自分」「得点 1 10」「保存」。登録済みの名前と点数をまとめて話して保存することもできます。</p>
-<div class="actions">
-<button class="primary" type="button" onclick="startVoiceInput()">🎙️ 音声操作を開始</button>
-<button class="secondary" type="button" onclick="stopVoiceInput()">音声停止</button>
-</div>
+<div class="panel voice-intro">
+<h3>話すだけで対局を記録</h3>
+<p class="muted">例：「花札、自分10点、相手5点で保存」。保存前に内容を確認できます。マイクは画面下の丸いボタンです。</p>
 </div>
 <div class="menu-grid">
 <button class="menu-button" onclick="showPage('recordPage')">🎮 ゲーム記録<small>ゲームを選んで対局を記録</small></button>
@@ -694,7 +710,15 @@ let pendingVoiceAction=null;
 function voiceStatus(message){
  const el=document.getElementById("voiceStatus");
  if(el)el.textContent=message;
+ const hint=document.getElementById("voiceDockHint");
+ if(hint)hint.textContent=message;
+ const button=document.getElementById("voiceMicButton");
+ const icon=document.getElementById("voiceMicIcon");
+ if(button)button.classList.toggle("active",voiceEnabled);
+ if(button)button.setAttribute("aria-label",voiceEnabled?"音声操作を停止":"音声操作を開始");
+ if(icon)icon.textContent=voiceEnabled?"■":"🎙";
 }
+function toggleVoiceInput(){if(voiceEnabled)stopVoiceInput();else startVoiceInput();}
 function startVoiceInput(){
  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!SpeechRecognition){voiceStatus("このブラウザは音声認識に対応していません。Android版Chromeなどでお試しください。");return;}
@@ -804,6 +828,8 @@ function tryVoiceQuickRecord(text){
  return true;
 }
 function handleVoiceCommand(command){
+ const transcript=document.getElementById("voiceTranscript");
+ if(transcript)transcript.textContent="聞き取った内容：「"+command.trim()+"」";
  const raw=command.trim();
  const text=raw.replace(/[。.!！?？、，]/g,"").replace(/\s+/g," ").trim();
  const lower=text.toLowerCase();
