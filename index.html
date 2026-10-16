@@ -87,10 +87,6 @@ body{padding-bottom:100px}
 </div>
 </header>
 <main>
-<div id="voiceChat" class="voice-chat" aria-live="polite">
- <div id="voiceTranscript" class="voice-bubble voice-user">ここに話した内容が表示されます。</div>
- <div id="voiceStatus" class="voice-bubble voice-assistant">マイクを押して話してください。ゲーム名・プレイヤー名・点数を伝えると記録できます。</div>
-</div>
 <div class="voice-dock">
  <button id="voiceMicButton" class="voice-mic" type="button" aria-label="音声操作を開始" onclick="toggleVoiceInput()"><span id="voiceMicIcon">🎙</span></button>
  <div class="voice-input-bar"><strong id="voiceDockTitle">音声アシスタント</strong><span id="voiceDockHint">マイクを押して話しかける</span></div>
@@ -100,6 +96,11 @@ body{padding-bottom:100px}
 <!-- ホーム -->
 <section id="homePage">
 <h2>ホーム</h2>
+<div id="voiceChat" class="voice-chat" aria-live="polite">
+ <div id="voiceTranscript" class="voice-bubble voice-user">ここに話した内容が表示されます。</div>
+ <div id="voiceStatus" class="voice-bubble voice-assistant">マイクを押して話してください。ゲーム名・プレイヤー名・点数を伝えると記録できます。</div>
+</div>
+
 <div class="voice-intro">
 <h3>話すだけで対局を記録</h3>
 <p class="muted">例：「花札、自分10点、相手5点で保存」。保存前に内容を確認できます。マイクは画面下の丸いボタンです。</p>
