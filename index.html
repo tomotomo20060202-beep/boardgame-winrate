@@ -67,13 +67,13 @@ input[type=checkbox]{width:auto}
 .voice-bubble{max-width:88%;padding:13px 16px;border:1px solid var(--border);border-radius:18px;background:white;font-size:14px;line-height:1.55;overflow-wrap:anywhere;box-shadow:0 2px 8px rgba(30,45,80,.04)}
 .voice-user{align-self:flex-start;border-bottom-left-radius:5px;background:#edf1ff;border-color:#dce4ff}
 .voice-assistant{align-self:flex-start;border-bottom-left-radius:5px}
-.voice-dock{position:fixed;z-index:1000;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:12px max(14px,calc((100vw - 760px)/2 + 14px));background:rgba(255,255,255,.96);border-top:1px solid var(--border);box-shadow:0 -5px 22px rgba(30,45,80,.08);backdrop-filter:blur(12px)}
+.voice-dock{position:fixed;z-index:1000;right:max(16px,calc((100vw - 760px)/2 + 16px));bottom:18px;display:flex;align-items:center;padding:0;background:transparent;border:0;box-shadow:none;backdrop-filter:none}
 .voice-mic{flex:0 0 58px;width:58px;height:58px;border:0;border-radius:50%;background:var(--main);color:white;font-size:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(79,112,232,.28)}
 .voice-mic.active{background:#d94b58;animation:micPulse 1.5s infinite}
 .voice-input-bar{min-width:0;flex:1;height:58px;border:1px solid var(--border);border-radius:16px;padding:9px 14px;display:flex;flex-direction:column;justify-content:center;gap:3px;background:#fff}
 .voice-input-bar strong{font-size:13px}.voice-input-bar span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .voice-stop{border:0;background:#edf0f6;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700}
-body{padding-bottom:100px}
+body{padding-bottom:40px}
 @keyframes micPulse{50%{box-shadow:0 0 0 8px rgba(217,75,88,.15)}}
 .notice{background:#fff8e6;border:1px solid #f0dfaa;border-radius:10px;padding:11px;font-size:13px}
 @media(max-width:420px){.menu-grid,.game-list,.stats-grid{grid-template-columns:1fr 1fr}.player-row{grid-template-columns:minmax(0,1fr) 86px}.panel,.game-card,.match-card{padding:13px}}
@@ -89,8 +89,6 @@ body{padding-bottom:100px}
 <main>
 <div class="voice-dock">
  <button id="voiceMicButton" class="voice-mic" type="button" aria-label="音声操作を開始" onclick="toggleVoiceInput()"><span id="voiceMicIcon">🎙</span></button>
- <div class="voice-input-bar"><strong id="voiceDockTitle">音声アシスタント</strong><span id="voiceDockHint">マイクを押して話しかける</span></div>
- <button class="voice-stop" type="button" onclick="stopVoiceInput()">停止</button>
 </div>
 
 <!-- ホーム -->
