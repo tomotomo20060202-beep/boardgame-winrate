@@ -28,7 +28,7 @@ p{line-height:1.6}
 .panel,.game-card,.match-card,.stat-card{background:white;border:1px solid var(--border);border-radius:15px;padding:16px;margin-bottom:14px}
 .menu-grid,.game-list,.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .menu-button,.game-choice{padding:18px 12px;min-height:76px;background:white;border:2px solid var(--border);border-radius:13px;color:var(--text);font-size:16px;font-weight:700;cursor:pointer}
-.menu-button{text-align:left}
+.menu-button{text-align:left}\n.recent-panel{margin:0;min-height:76px;padding:18px 12px;overflow:hidden}\n.recent-panel h3{margin-bottom:7px}\n.recent-panel .list-row{padding:5px 0;font-size:12px}
 .menu-button small{display:block;margin-top:7px;font-size:12px;font-weight:400;color:var(--muted)}
 .game-choice.selected{background:var(--light);border-color:var(--main);color:#2d4fc0}
 button{font:inherit}
@@ -104,10 +104,10 @@ body{padding-bottom:40px}
 <button class="menu-button" onclick="showPage('recordPage')">🎮 ゲーム記録<small>ゲームを選んで対局を記録</small></button>
 <button class="menu-button" onclick="showPage('historyPage')">📊 履歴・勝率<small>対局結果を振り返る</small></button>
 <button class="menu-button" onclick="showPage('settingsPage')">⚙️ 設定<small>ゲームやプレイヤーを登録</small></button>
-</div>
-<div class="panel" style="margin-top:16px">
+<div class="panel recent-panel">
 <h3>最近の対局</h3>
 <div id="recentMatches" class="muted">まだ対局記録がありません。</div>
+</div>
 </div>
 <div class="voice-intro">
 <h3>話すだけで対局を記録</h3>
