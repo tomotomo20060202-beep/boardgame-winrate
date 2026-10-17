@@ -330,6 +330,8 @@ function renderGameList(){
 }
 
 function gameChanged(){
+ // どのゲームでもプレイヤー名はキーボード入力できるようにする
+ document.querySelectorAll("#recordPlayers .player-name-input").forEach(input=>{input.type="text";input.inputMode="text";});
  const select=document.getElementById("gameName");
  document.querySelectorAll(".game-choice").forEach(button=>{
   button.classList.toggle("selected",button.textContent===select.value);
@@ -444,9 +446,10 @@ function addRecordPlayer(){
  nl.textContent="プレイヤー"+(i+1);
  const ns=document.createElement("input");
  ns.type="text";
+ ns.inputMode="text";
  ns.id="recordPlayer"+i;
  ns.className="player-name-input";
- ns.placeholder="名前をキーボードで入力";
+ ns.placeholder="プレイヤー名を入力";
  ns.setAttribute("aria-label","プレイヤー"+(i+1)+"の名前");
  ns.setAttribute("list","recordPlayerSuggestions");
  ns.autocomplete="off";
@@ -543,7 +546,7 @@ function saveMatch(){
   const nameInput=document.getElementById("recordPlayer"+i);
   const scoreInput=document.getElementById("recordScore"+i);
   const name=nameInput.value.trim();
-  if(!name){alert("プレイヤー"+(i+1)+"の名前を選択してください。");return;}
+  if(!name){alert("プレイヤー"+(i+1)+"の名前を入力してください。");return;}
   if(players.some(p=>p.name===name)){alert("同じ名前が複数選択されています。");return;}
   const score=Number(scoreInput.value);
   if(!Number.isFinite(score)){alert("得点を確認してください。");return;}
