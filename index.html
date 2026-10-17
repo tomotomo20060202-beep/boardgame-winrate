@@ -333,7 +333,7 @@ function renderGameList(){
 
 function gameChanged(){
  // どのゲームでもプレイヤー名はキーボード入力できるようにする
- document.querySelectorAll("#recordPlayers .player-name-input").forEach(input=>{input.type="text";input.inputMode="text";});
+ // プレイヤー名は登録済みリストから選択する
  const select=document.getElementById("gameName");
  document.querySelectorAll(".game-choice").forEach(button=>{
   button.classList.toggle("selected",button.textContent===select.value);
@@ -436,17 +436,18 @@ function addRecordPlayer(){
  if(recordPlayerCount>=8){alert("プレイヤーは最大8人までです。");return;}
  const i=recordPlayerCount++,row=document.createElement("div");row.className="player-row";row.id="recordRow"+i;
  const nl=document.createElement("label");nl.htmlFor="recordPlayer"+i;nl.textContent="プレイヤー"+(i+1);
- const ns=document.createElement("input");ns.type="text";ns.inputMode="text";ns.id="recordPlayer"+i;ns.className="player-name-input";ns.placeholder="プレイヤー名を入力";ns.setAttribute("aria-label","プレイヤー"+(i+1)+"の名前");ns.setAttribute("list","recordPlayerSuggestions");ns.autocomplete="off";if(config.people[i])ns.value=config.people[i];
+ const ns=document.createElement("select");ns.id="recordPlayer"+i;ns.className="player-name-input";ns.setAttribute("aria-label","プレイヤー"+(i+1)+"の名前");
+ const blank=document.createElement("option");blank.value="";blank.textContent=config.people.length?"プレイヤー名を選択":"設定でプレイヤー名を登録してください";ns.appendChild(blank);
+ config.people.forEach(name=>{const option=document.createElement("option");option.value=name;option.textContent=name;ns.appendChild(option);});
+ if(config.people[i])ns.value=config.people[i];
  row.append(nl,ns);document.getElementById("recordPlayers").appendChild(row);
- let suggestions=document.getElementById("recordPlayerSuggestions");if(!suggestions){suggestions=document.createElement("datalist");suggestions.id="recordPlayerSuggestions";document.body.appendChild(suggestions);}
- suggestions.innerHTML="";config.people.forEach(name=>{const o=document.createElement("option");o.value=name;suggestions.appendChild(o);});
  const scoreRow=document.createElement("div");scoreRow.className="progress-score-row";scoreRow.id="progressScoreRow"+i;
  const scoreName=document.createElement("div");scoreName.className="muted";scoreName.id="progressScoreName"+i;scoreName.textContent=ns.value||("プレイヤー"+(i+1));
  const scoreWrap=document.createElement("div"),scoreLabel=document.createElement("label");scoreLabel.id="recordScoreLabel"+i;scoreLabel.htmlFor="recordScore"+i;scoreLabel.textContent=isDaifugoGame(document.getElementById("gameName").value)?"順位":"得点";
  const score=document.createElement("input");score.type="number";score.id="recordScore"+i;score.addEventListener("input",renderLiveRanking);score.value=isDaifugoGame(document.getElementById("gameName").value)?String(i+1):"0";score.step="1";
  if(isDaifugoGame(document.getElementById("gameName").value)){score.min="1";score.max=String(recordPlayerCount);score.placeholder="1〜"+recordPlayerCount;}else score.placeholder="得点";
  scoreWrap.append(scoreLabel,score);scoreRow.append(scoreName,scoreWrap);document.getElementById("gameProgressScores").appendChild(scoreRow);
- ns.addEventListener("input",()=>{scoreName.textContent=ns.value||("プレイヤー"+(i+1));renderHanaTarget();renderLiveRanking();});
+ ns.addEventListener("change",()=>{scoreName.textContent=ns.value||("プレイヤー"+(i+1));renderHanaTarget();renderLiveRanking();});
  renderHanaTarget();syncRecordInputLabels();
 }
 function resetRecordPlayers(){
