@@ -47,8 +47,8 @@ input[type=checkbox]{width:auto}
 .muted{color:var(--muted);font-size:13px}
 .hidden{display:none!important}
 .back-button{margin-bottom:16px;border:0;background:transparent;color:var(--main);font-weight:700;cursor:pointer;padding:4px 0}
-.player-row{display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:10px;align-items:end;margin-bottom:12px}
-.player-row label{margin-bottom:6px}\n.player-name-input{min-width:0;width:100%;}
+.player-row{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:end;margin-bottom:12px}
+.player-row label{margin-bottom:6px}\n.player-name-input{min-width:0;width:100%;}\n.progress-score-row{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:10px;align-items:end;margin-bottom:12px}\n.progress-score-row label{margin-bottom:6px}
 .stat-number{font-size:26px;font-weight:800}
 .stat-label{color:var(--muted);font-size:12px}
 .stat-card{margin:0}
@@ -143,10 +143,10 @@ body{padding-bottom:40px}
 
 <div class="panel">
 <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
-<h3>③ プレイヤーと得点</h3>
+<h3>③ プレイヤー名</h3>
 <button type="button" class="small-button" onclick="addRecordPlayer()">＋追加</button>
 </div>
-<p id="recordHelp" class="muted">勝利条件に従って勝者を自動判定します。</p>
+<p id="recordHelp" class="muted">ここではゲーム内で使用するプレイヤー名を登録します。点数・順位は「ゲーム進行」で入力します。</p>
 <div id="recordPlayers"></div>
 <div class="actions" style="margin-top:10px"><button type="button" class="secondary" onclick="startVoiceInput()">🎙️ 音声で入力</button><button type="button" class="secondary" onclick="stopVoiceInput()">音声入力を停止</button></div>
 </div>
@@ -158,6 +158,8 @@ body{padding-bottom:40px}
 <button id="startGameButton" type="button" class="primary" onclick="startGameSession()">▶ ゲーム開始</button>
 <button id="endGameButton" type="button" class="secondary" onclick="endGameSession()" disabled>■ ゲーム終了</button>
 </div>
+<h4 style="margin:14px 0 8px">点数・順位の入力</h4>
+<div id="gameProgressScores"></div>
 <div id="liveRanking" style="margin-top:14px">
 <p class="muted">ゲームを開始すると、入力された得点・順位からランキングをリアルタイム表示します。</p>
 </div>
@@ -342,16 +344,13 @@ function gameChanged(){
 function syncRecordInputLabels(){
  const rankMode=isDaifugoGame(document.getElementById("gameName").value);
  for(let i=0;i<recordPlayerCount;i++){
-  const row=document.getElementById("recordRow"+i);if(!row)continue;
-  const labels=row.querySelectorAll("label");
-  if(labels[1])labels[1].textContent=rankMode?"順位":"得点";
-  const input=document.getElementById("recordScore"+i);
+  const input=document.getElementById("recordScore"+i),label=document.getElementById("recordScoreLabel"+i);
+  if(label)label.textContent=rankMode?"順位":"得点";
   if(input){input.min=rankMode?"1":"";input.max=rankMode?String(recordPlayerCount):"";input.placeholder=rankMode?"1〜"+recordPlayerCount:"得点";if(rankMode&&input.value==="0")input.value=String(i+1);}
  }
  const help=document.getElementById("recordHelp");
- if(help)help.textContent=rankMode?"順位を入力してください。1位が大富豪。前回の大富豪が1位以外なら都落ちで大貧民に確定します。":"勝利条件に従って勝者を自動判定します。";
+ if(help)help.textContent=rankMode?"プレイヤー名を登録し、ゲーム進行で順位を入力してください。1位が大富豪。前回の大富豪が1位以外なら都落ちで大貧民に確定します。":"プレイヤー名を登録し、ゲーム進行で得点を入力してください。";
 }
-
 function updateRecordGame(){
  const name=document.getElementById("gameName").value;
  const game=getGame(name);
@@ -435,52 +434,25 @@ function resetGameSession(){
 /* プレイヤーと得点 */
 function addRecordPlayer(){
  if(recordPlayerCount>=8){alert("プレイヤーは最大8人までです。");return;}
- const i=recordPlayerCount++;
- const row=document.createElement("div");
- row.className="player-row";
- row.id="recordRow"+i;
-
- const nw=document.createElement("div");
- const nl=document.createElement("label");
- nl.htmlFor="recordPlayer"+i;
- nl.textContent="プレイヤー"+(i+1);
- const ns=document.createElement("input");
- ns.type="text";
- ns.inputMode="text";
- ns.id="recordPlayer"+i;
- ns.className="player-name-input";
- ns.placeholder="プレイヤー名を入力";
- ns.setAttribute("aria-label","プレイヤー"+(i+1)+"の名前");
- ns.setAttribute("list","recordPlayerSuggestions");
- ns.autocomplete="off";
- if(config.people[i])ns.value=config.people[i];
- ns.addEventListener("input",()=>{renderHanaTarget();renderLiveRanking();});
- nw.append(nl,ns);
- let suggestions=document.getElementById("recordPlayerSuggestions");
- if(!suggestions){
-  suggestions=document.createElement("datalist");
-  suggestions.id="recordPlayerSuggestions";
-  document.body.appendChild(suggestions);
- }
- suggestions.innerHTML="";
- config.people.forEach(name=>{
-  const o=document.createElement("option");o.value=name;suggestions.appendChild(o);
- });
-
- const sw=document.createElement("div");
- const sl=document.createElement("label");
- sl.htmlFor="recordScore"+i;sl.textContent=isDaifugoGame(document.getElementById("gameName").value)?"順位":"得点";
- const score=document.createElement("input");
- score.type="number";score.id="recordScore"+i;score.addEventListener("input",renderLiveRanking);score.value=isDaifugoGame(document.getElementById("gameName").value)?String(i+1):"0";score.step="1";if(isDaifugoGame(document.getElementById("gameName").value)){score.min="1";score.max=String(recordPlayerCount);score.placeholder="1〜"+recordPlayerCount;}
- sw.append(sl,score);
- row.append(nw,sw);
- document.getElementById("recordPlayers").appendChild(row);
- renderHanaTarget();
- syncRecordInputLabels();
+ const i=recordPlayerCount++,row=document.createElement("div");row.className="player-row";row.id="recordRow"+i;
+ const nl=document.createElement("label");nl.htmlFor="recordPlayer"+i;nl.textContent="プレイヤー"+(i+1);
+ const ns=document.createElement("input");ns.type="text";ns.inputMode="text";ns.id="recordPlayer"+i;ns.className="player-name-input";ns.placeholder="プレイヤー名を入力";ns.setAttribute("aria-label","プレイヤー"+(i+1)+"の名前");ns.setAttribute("list","recordPlayerSuggestions");ns.autocomplete="off";if(config.people[i])ns.value=config.people[i];
+ row.append(nl,ns);document.getElementById("recordPlayers").appendChild(row);
+ let suggestions=document.getElementById("recordPlayerSuggestions");if(!suggestions){suggestions=document.createElement("datalist");suggestions.id="recordPlayerSuggestions";document.body.appendChild(suggestions);}
+ suggestions.innerHTML="";config.people.forEach(name=>{const o=document.createElement("option");o.value=name;suggestions.appendChild(o);});
+ const scoreRow=document.createElement("div");scoreRow.className="progress-score-row";scoreRow.id="progressScoreRow"+i;
+ const scoreName=document.createElement("div");scoreName.className="muted";scoreName.id="progressScoreName"+i;scoreName.textContent=ns.value||("プレイヤー"+(i+1));
+ const scoreWrap=document.createElement("div"),scoreLabel=document.createElement("label");scoreLabel.id="recordScoreLabel"+i;scoreLabel.htmlFor="recordScore"+i;scoreLabel.textContent=isDaifugoGame(document.getElementById("gameName").value)?"順位":"得点";
+ const score=document.createElement("input");score.type="number";score.id="recordScore"+i;score.addEventListener("input",renderLiveRanking);score.value=isDaifugoGame(document.getElementById("gameName").value)?String(i+1):"0";score.step="1";
+ if(isDaifugoGame(document.getElementById("gameName").value)){score.min="1";score.max=String(recordPlayerCount);score.placeholder="1〜"+recordPlayerCount;}else score.placeholder="得点";
+ scoreWrap.append(scoreLabel,score);scoreRow.append(scoreName,scoreWrap);document.getElementById("gameProgressScores").appendChild(scoreRow);
+ ns.addEventListener("input",()=>{scoreName.textContent=ns.value||("プレイヤー"+(i+1));renderHanaTarget();renderLiveRanking();});
+ renderHanaTarget();syncRecordInputLabels();
 }
 function resetRecordPlayers(){
  recordPlayerCount=0;
  document.getElementById("recordPlayers").innerHTML="";
+ document.getElementById("gameProgressScores").innerHTML="";
  addRecordPlayer();addRecordPlayer();
  syncRecordInputLabels();
 }
@@ -1089,12 +1061,12 @@ function handleVoiceCommand(command){
 function reindexRecordPlayers(){
  const rows=[...document.querySelectorAll("#recordPlayers .player-row")];
  rows.forEach((row,i)=>{
-  row.id="recordRow"+i;
-  const select=row.querySelector("select");select.id="recordPlayer"+i;
-  const labels=row.querySelectorAll("label");labels[0].htmlFor=select.id;labels[0].textContent="プレイヤー"+(i+1);
-  const input=row.querySelector("input");input.id="recordScore"+i;labels[1].htmlFor=input.id;
+  row.id="recordRow"+i;const input=row.querySelector(".player-name-input");input.id="recordPlayer"+i;
+  const label=row.querySelector("label");label.htmlFor=input.id;label.textContent="プレイヤー"+(i+1);
+  const scoreRow=document.getElementById("progressScoreRow"+i);
+  if(scoreRow){const scoreInput=scoreRow.querySelector("input"),scoreLabel=scoreRow.querySelector("label"),scoreName=scoreRow.querySelector(".muted");scoreInput.id="recordScore"+i;scoreLabel.id="recordScoreLabel"+i;scoreLabel.htmlFor=scoreInput.id;scoreName.id="progressScoreName"+i;scoreName.textContent=input.value||("プレイヤー"+(i+1));}
  });
- recordPlayerCount=rows.length;syncRecordInputLabels();renderHanaTarget();
+ recordPlayerCount=rows.length;syncRecordInputLabels();renderHanaTarget();renderLiveRanking();
 }
 
 if ("serviceWorker" in navigator) {
