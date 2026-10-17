@@ -272,6 +272,9 @@ let config=loadConfig();
 let matches=loadMatches();
 let recordPlayerCount=0;
 let hanaReturnPage="recordPage";
+// 大富豪の直前順位は、このページを開いている間だけ一時保持する（履歴保存には依存しない）
+let lastDaifugoTop=null;
+let sessionPreviousDaifugoTop=null;
 
 function saveConfig(){localStorage.setItem(CONFIG_KEY,JSON.stringify(config));}
 function saveMatches(){localStorage.setItem(MATCH_KEY,JSON.stringify(matches));}
@@ -372,6 +375,8 @@ function startGameSession(){
   const name=(document.getElementById("recordPlayer"+i)?.value||"").trim();
   if(!name){alert("プレイヤー"+(i+1)+"の名前を入力してください。");return;}
  }
+ const gameName=document.getElementById("gameName").value;
+ sessionPreviousDaifugoTop=isDaifugoGame(gameName)?lastDaifugoTop:null;
  gameSessionStarted=true;gameSessionEnded=false;
  document.getElementById("gameSessionStatus").textContent="ゲーム進行中です。得点・順位を入力するとランキングが更新されます。";
  document.getElementById("startGameButton").disabled=true;
@@ -394,6 +399,12 @@ function endGameSession(){
    alert("大富豪では同じ順位を登録できません。順位を修正してください。");return;
   }
  }
+ // 終了時点の大富豪を次の対局用に一時保持し、今回の都落ち判定自体は終了させる
+ if(isDaifugoGame(document.getElementById("gameName").value)){
+  const topIndex=Array.from({length:recordPlayerCount},(_,i)=>i).find(i=>Number(document.getElementById("recordScore"+i)?.value)===1);
+  lastDaifugoTop=topIndex===undefined?null:(document.getElementById("recordPlayer"+topIndex)?.value||"").trim()||null;
+ }
+ sessionPreviousDaifugoTop=null;
  gameSessionEnded=true;gameSessionStarted=false;
  document.getElementById("gameSessionStatus").textContent="ゲーム終了！最終ランキングを確認してから「対局を保存する」を押してください。";
  document.getElementById("startGameButton").disabled=false;
@@ -427,10 +438,9 @@ function renderLiveRanking(){
   if(hasDuplicateRanks){
    const warning=document.createElement("p");warning.className="error";warning.textContent="順位が重複しています。同じ順位は登録できません。";container.appendChild(warning);
   }
-  const previous=normalizedMatches().find(m=>m.game===gameName);
-  const previousTop=previous?(previous.players.find(p=>Number(p.score)===1)||{}).name:null;
   const currentTop=ready.find(p=>p.score===1)?.name;
-  if(previousTop&&currentTop&&previousTop!==currentTop&&players.some(p=>p.name===previousTop)){
+  const previousTop=sessionPreviousDaifugoTop;
+  if(gameSessionStarted&&previousTop&&currentTop&&previousTop!==currentTop&&players.some(p=>p.name===previousTop)){
    forcedDaifugo=previousTop;
   }
   ready.sort((a,b)=>a.score-b.score||a.original-b.original);
@@ -465,6 +475,7 @@ function renderLiveRanking(){
 }
 function resetGameSession(){
  gameSessionStarted=false;gameSessionEnded=false;
+ sessionPreviousDaifugoTop=null;
  const status=document.getElementById("gameSessionStatus");
  if(status)status.textContent="ゲーム開始前です。プレイヤーと得点欄を確認して開始してください。";
  const start=document.getElementById("startGameButton"),end=document.getElementById("endGameButton");
@@ -573,8 +584,7 @@ function saveMatch(){
   if(players.length<4){alert("大富豪は4人以上で記録してください。");return;}
   const ranks=players.map(p=>p.score);
   if(ranks.some(r=>!Number.isInteger(r)||r<1||r>players.length)||new Set(ranks).size!==players.length){alert("順位は1位から人数分まで、重複しないように入力してください。");return;}
-  const previous=normalizedMatches().find(m=>m.game===gameName);
-  const previousTop=previous?(previous.players.find(p=>Number(p.score)===1)||{}).name:null;
+  const previousTop=sessionPreviousDaifugoTop;
   const currentTop=players.find(p=>p.score===1).name;
   const forcedDaifugo=previousTop&&previousTop!==currentTop&&players.some(p=>p.name===previousTop)?previousTop:null;
   const n=players.length;
