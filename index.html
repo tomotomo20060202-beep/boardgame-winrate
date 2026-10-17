@@ -48,7 +48,7 @@ input[type=checkbox]{width:auto}
 .hidden{display:none!important}
 .back-button{margin-bottom:16px;border:0;background:transparent;color:var(--main);font-weight:700;cursor:pointer;padding:4px 0}
 .player-row{display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:10px;align-items:end;margin-bottom:12px}
-.player-row label{margin-bottom:6px}
+.player-row label{margin-bottom:6px}\n.player-name-input{min-width:0;width:100%;}
 .stat-number{font-size:26px;font-weight:800}
 .stat-label{color:var(--muted);font-size:12px}
 .stat-card{margin:0}
@@ -445,20 +445,24 @@ function addRecordPlayer(){
  const ns=document.createElement("input");
  ns.type="text";
  ns.id="recordPlayer"+i;
- ns.placeholder="名前を入力";
+ ns.className="player-name-input";
+ ns.placeholder="名前をキーボードで入力";
+ ns.setAttribute("aria-label","プレイヤー"+(i+1)+"の名前");
  ns.setAttribute("list","recordPlayerSuggestions");
  ns.autocomplete="off";
  if(config.people[i])ns.value=config.people[i];
  ns.addEventListener("input",()=>{renderHanaTarget();renderLiveRanking();});
  nw.append(nl,ns);
- if(!document.getElementById("recordPlayerSuggestions")){
-  const suggestions=document.createElement("datalist");
+ let suggestions=document.getElementById("recordPlayerSuggestions");
+ if(!suggestions){
+  suggestions=document.createElement("datalist");
   suggestions.id="recordPlayerSuggestions";
-  config.people.forEach(name=>{
-   const o=document.createElement("option");o.value=name;suggestions.appendChild(o);
-  });
   document.body.appendChild(suggestions);
  }
+ suggestions.innerHTML="";
+ config.people.forEach(name=>{
+  const o=document.createElement("option");o.value=name;suggestions.appendChild(o);
+ });
 
  const sw=document.createElement("div");
  const sl=document.createElement("label");
