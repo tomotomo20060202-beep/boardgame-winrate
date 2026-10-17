@@ -275,6 +275,7 @@ let hanaReturnPage="recordPage";
 // 大富豪の直前順位は、このページを開いている間だけ一時保持する（履歴保存には依存しない）
 let lastDaifugoTop=null;
 let sessionPreviousDaifugoTop=null;
+let completedSessionForcedDaifugo=null;
 
 function saveConfig(){localStorage.setItem(CONFIG_KEY,JSON.stringify(config));}
 function saveMatches(){localStorage.setItem(MATCH_KEY,JSON.stringify(matches));}
@@ -399,10 +400,15 @@ function endGameSession(){
    alert("大富豪では同じ順位を登録できません。順位を修正してください。");return;
   }
  }
- // 終了時点の大富豪を次の対局用に一時保持し、今回の都落ち判定自体は終了させる
+ // 終了時点の大富豪を次の対局用に一時保持。都落ち表示は終了と同時に解除する
+ completedSessionForcedDaifugo=null;
  if(isDaifugoGame(document.getElementById("gameName").value)){
   const topIndex=Array.from({length:recordPlayerCount},(_,i)=>i).find(i=>Number(document.getElementById("recordScore"+i)?.value)===1);
-  lastDaifugoTop=topIndex===undefined?null:(document.getElementById("recordPlayer"+topIndex)?.value||"").trim()||null;
+  const currentTop=topIndex===undefined?null:(document.getElementById("recordPlayer"+topIndex)?.value||"").trim()||null;
+  lastDaifugoTop=currentTop;
+  if(sessionPreviousDaifugoTop&&currentTop&&sessionPreviousDaifugoTop!==currentTop&&Array.from({length:recordPlayerCount},(_,i)=>(document.getElementById("recordPlayer"+i)?.value||"").trim()).includes(sessionPreviousDaifugoTop)){
+   completedSessionForcedDaifugo=sessionPreviousDaifugoTop;
+  }
  }
  sessionPreviousDaifugoTop=null;
  gameSessionEnded=true;gameSessionStarted=false;
@@ -584,7 +590,7 @@ function saveMatch(){
   if(players.length<4){alert("大富豪は4人以上で記録してください。");return;}
   const ranks=players.map(p=>p.score);
   if(ranks.some(r=>!Number.isInteger(r)||r<1||r>players.length)||new Set(ranks).size!==players.length){alert("順位は1位から人数分まで、重複しないように入力してください。");return;}
-  const previousTop=sessionPreviousDaifugoTop;
+  const previousTop=completedSessionForcedDaifugo;
   const currentTop=players.find(p=>p.score===1).name;
   const forcedDaifugo=previousTop&&previousTop!==currentTop&&players.some(p=>p.name===previousTop)?previousTop:null;
   const n=players.length;
@@ -608,6 +614,7 @@ function saveMatch(){
  });
  saveMatches();
  alert("対局を保存しました！");
+ completedSessionForcedDaifugo=null;
  resetRecordPlayers();
  document.getElementById("matchDate").value=todayString();
  showPage("historyPage");
