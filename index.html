@@ -349,7 +349,7 @@ function syncRecordInputLabels(){
   if(input){input.min=rankMode?"1":"";input.max=rankMode?String(recordPlayerCount):"";input.placeholder=rankMode?"1〜"+recordPlayerCount:"得点";if(rankMode&&input.value==="0")input.value=String(i+1);}
  }
  const help=document.getElementById("recordHelp");
- if(help)help.textContent=rankMode?"プレイヤー名を登録し、ゲーム進行で順位を入力してください。1位が大富豪。前回の大富豪が1位以外なら都落ちで大貧民に確定します。":"プレイヤー名を登録し、ゲーム進行で得点を入力してください。";
+ if(help)help.textContent=rankMode?"大富豪は4人以上。順位は全員別々に入力します。1位＝大富豪、2位＝富豪、最下位＝大貧民、その1つ上＝貧民、それ以外＝平民。前回の大富豪が1位以外なら都落ちで大貧民になります。":"プレイヤー名を登録し、ゲーム進行で得点を入力してください。";
 }
 function updateRecordGame(){
  const name=document.getElementById("gameName").value;
@@ -380,6 +380,20 @@ function startGameSession(){
 }
 function endGameSession(){
  if(!gameSessionStarted){alert("先にゲームを開始してください。");return;}
+ if(isDaifugoGame(document.getElementById("gameName").value)){
+  const ranks=[];
+  for(let i=0;i<recordPlayerCount;i++){
+   const name=(document.getElementById("recordPlayer"+i)?.value||"").trim();
+   const value=document.getElementById("recordScore"+i)?.value;
+   if(name&&value!=="")ranks.push(Number(value));
+  }
+  if(ranks.length!==recordPlayerCount||ranks.some(r=>!Number.isInteger(r)||r<1||r>recordPlayerCount)){
+   alert("大富豪の順位は、全員に1位から人数分までの順位を入力してください。");return;
+  }
+  if(new Set(ranks).size!==ranks.length){
+   alert("大富豪では同じ順位を登録できません。順位を修正してください。");return;
+  }
+ }
  gameSessionEnded=true;gameSessionStarted=false;
  document.getElementById("gameSessionStatus").textContent="ゲーム終了！最終ランキングを確認してから「対局を保存する」を押してください。";
  document.getElementById("startGameButton").disabled=false;
@@ -405,6 +419,11 @@ function renderLiveRanking(){
  if(!players.length){container.innerHTML='<p class="muted">プレイヤーを入力してください。</p>';return;}
  if(rankMode){
   ready.sort((a,b)=>a.score-b.score||a.original-b.original);
+  const rankValues=ready.map(p=>p.score);
+  const hasDuplicateRanks=rankValues.some((rank,index)=>rankValues.indexOf(rank)!==index);
+  if(hasDuplicateRanks){
+   const warning=document.createElement("p");warning.className="error";warning.textContent="順位が重複しています。同じ順位は登録できません。";container.appendChild(warning);
+  }
  }else{
   ready.sort((a,b)=>(game?.mode==="low"?a.score-b.score:b.score-a.score)||a.original-b.original);
  }
