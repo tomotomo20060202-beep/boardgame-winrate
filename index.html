@@ -405,8 +405,9 @@ function renderLiveRanking(){
  if(!gameSessionStarted&&!gameSessionEnded){
   container.innerHTML='<p class="muted">ゲームを開始すると、入力された得点・順位からランキングをリアルタイム表示します。</p>';return;
  }
- const game=getGame(document.getElementById("gameName").value);
- const rankMode=isDaifugoGame(document.getElementById("gameName").value);
+ const gameName=document.getElementById("gameName").value;
+ const game=getGame(gameName);
+ const rankMode=isDaifugoGame(gameName);
  const players=[];
  for(let i=0;i<recordPlayerCount;i++){
   const name=(document.getElementById("recordPlayer"+i)?.value||"").trim();
@@ -416,25 +417,46 @@ function renderLiveRanking(){
   players.push({name,score,original:i});
  }
  const ready=players.filter(p=>p.score!==null&&Number.isFinite(p.score));
+ container.innerHTML="";
  if(!players.length){container.innerHTML='<p class="muted">プレイヤーを入力してください。</p>';return;}
+ if(!ready.length){container.innerHTML='<p class="muted">得点・順位を入力するとランキングが表示されます。</p>';return;}
+ let forcedDaifugo=null;
  if(rankMode){
-  ready.sort((a,b)=>a.score-b.score||a.original-b.original);
   const rankValues=ready.map(p=>p.score);
   const hasDuplicateRanks=rankValues.some((rank,index)=>rankValues.indexOf(rank)!==index);
   if(hasDuplicateRanks){
    const warning=document.createElement("p");warning.className="error";warning.textContent="順位が重複しています。同じ順位は登録できません。";container.appendChild(warning);
   }
+  const previous=normalizedMatches().find(m=>m.game===gameName);
+  const previousTop=previous?(previous.players.find(p=>Number(p.score)===1)||{}).name:null;
+  const currentTop=ready.find(p=>p.score===1)?.name;
+  if(previousTop&&currentTop&&previousTop!==currentTop&&players.some(p=>p.name===previousTop)){
+   forcedDaifugo=previousTop;
+  }
+  ready.sort((a,b)=>a.score-b.score||a.original-b.original);
+  if(forcedDaifugo){
+   const former=ready.find(p=>p.name===forcedDaifugo);
+   if(former){
+    ready.splice(ready.indexOf(former),1);
+    ready.push(former);
+   }
+  }
  }else{
   ready.sort((a,b)=>(game?.mode==="low"?a.score-b.score:b.score-a.score)||a.original-b.original);
  }
- container.innerHTML="";
- if(!ready.length){container.innerHTML='<p class="muted">得点・順位を入力するとランキングが表示されます。</p>';return;}
+ if(forcedDaifugo){
+  const note=document.createElement("p");note.className="muted";note.textContent=forcedDaifugo+" は前回の大富豪のため、今回1位を取れない場合は都落ちで最下位になります。";container.appendChild(note);
+ }
  ready.forEach((p,index)=>{
   const row=document.createElement("div");row.className="live-rank-row";
   const rank=document.createElement("div");rank.className="live-rank-number";rank.textContent=(index+1)+"位";
   const main=document.createElement("div");main.className="live-rank-main";main.textContent=p.name;
   const score=document.createElement("div");score.className="live-rank-score";
-  score.textContent=rankMode?(Number.isInteger(p.score)?rankTitleFor(p.score,players.length):"順位未入力"):(p.score+(game?.scoreType==="custom"?"点":"点"));
+  if(rankMode){
+   if(forcedDaifugo&&p.name===forcedDaifugo)score.textContent="大貧民（都落ち）";
+   else if(forcedDaifugo&&index===ready.length-2)score.textContent="貧民";
+   else score.textContent=rankTitleFor(index+1,players.length);
+  }else score.textContent=p.score+(game?.scoreType==="custom"?"点":"点");
   row.append(rank,main,score);container.appendChild(row);
  });
  if(ready.length<players.length){
